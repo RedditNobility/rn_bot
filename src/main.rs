@@ -8,6 +8,9 @@
 //! git = "https://github.com/serenity-rs/serenity.git"
 //! features = ["framework", "standard_framework"]
 //! ```
+mod moderator;
+mod event;
+
 use std::{collections::{HashMap, HashSet}, env, fmt::Write, sync::Arc};
 use serenity::{
     prelude::*,
@@ -28,24 +31,35 @@ use serenity::{
     },
     utils::{content_safe, ContentSafeOptions},
 };
-
 use serenity::prelude::*;
 use tokio::sync::Mutex;
+use rand::seq::SliceRandom;
 
-// A container type is created for inserting into the Client's `data`, which
-// allows for data to be accessible across all events and framework commands, or
-// anywhere else that has a copy of the `data` Arc.
-struct ShardManagerContainer;
+// 0.7.2
+pub struct DataHolder {}
 
-impl TypeMapKey for ShardManagerContainer {
-    type Value = Arc<Mutex<ShardManager>>;
+impl DataHolder {
+    fn new() -> DataHolder {
+        DataHolder {}
+    }
 }
 
-struct CommandCounter;
+pub struct Bot {}
 
-impl TypeMapKey for CommandCounter {
-    type Value = HashMap<String, u64>;
+impl Bot {
+    fn new() -> Bot {
+        Bot {}
+    }
+    fn test(&mut self) {
+        println!("test");
+    }
 }
+
+impl TypeMapKey for DataHolder {
+    type Value = Bot;
+}
+
+impl Bot {}
 
 struct Handler;
 
@@ -54,10 +68,12 @@ impl EventHandler for Handler {
     async fn ready(&self, status: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
         status.online().await;
-        status.set_activity(Activity::playing("Start a coup")).await
+        status.set_activity(Activity::playing("A coup!")).await
     }
     async fn message(&self, ctx: Context, msg: Message) {
         if msg.is_own(ctx.cache).await { return; }
+        let x = ctx.data.read().await;
+
         if msg.content.clone().to_lowercase().contains("fuck zorthan") {
             let msg = msg.channel_id.send_message(&ctx.http, |m| {
                 m.embed(|e| {
@@ -73,6 +89,26 @@ impl EventHandler for Handler {
                 m
             }).await;
         }
+    }
+    async fn guild_member_addition(&self, status: Context, guild: GuildId, member: Member) {
+        println!("Test");
+        let channel = ChannelId(830415533673414696);
+        let file = lines_from_file(Path::new("resources").join("welcome-jokes"));
+
+        let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
+        let msg = channel.send_message(&status.http, |m| {
+            m.embed(|e| {
+                e.title(format!("Welcome {}", member.user.name.clone()));
+                e.description(option.replace("{name}", &*member.user.name.clone()));
+                e.footer(|f| {
+                    f.text("Robotic Monarch");
+                    f
+                });
+
+                e
+            });
+            m
+        }).await;
     }
 }
 
@@ -142,6 +178,12 @@ use serenity::builder::CreateEmbed;
 use serenity::http::routing::RouteInfo::CreateMessage;
 use serenity::http::AttachmentType;
 use std::path::Path;
+use serenity::model::id::{GuildId, ChannelId};
+use serenity::model::guild::Member;
+use serenity::cache::FromStrAndCache;
+use std::io::{BufReader, BufRead};
+use std::fs::File;
+use serenity::client::bridge::gateway::GatewayIntents;
 
 fn _dispatch_error_no_macro<'fut>(ctx: &'fut mut Context, msg: &'fut Message, error: DispatchError) -> BoxFuture<'fut, ()> {
     async move {
@@ -168,25 +210,24 @@ async fn main() {
     let framework = StandardFramework::new()
         .configure(|c| c
             .with_whitespace(true)
-            .prefix("/")
+            .prefix("!")
             .delimiters(vec![", ", ","]))
         .unrecognised_command(unknown_command)
         .normal_message(normal_message)
         .on_dispatch_error(dispatch_error)
         .help(&MY_HELP)
-        .group(&GENERAL_GROUP);
+        .group(&GENERAL_GROUP).group(&moderator::MOD_GROUP);
 
     let mut client = Client::builder(&token)
         .event_handler(Handler)
-        .framework(framework)
+        .framework(framework).intents(GatewayIntents::all())
         .await
         .expect("Err creating client");
 
 
     {
         let mut data = client.data.write().await;
-        data.insert::<CommandCounter>(HashMap::default());
-        data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
+        data.insert::<DataHolder>(Bot::new());
     }
 
     if let Err(why) = client.start().await {
@@ -200,3 +241,13 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
 
     Ok(())
 }
+
+
+fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
+    let file = File::open(filename).expect("no such file");
+    let buf = BufReader::new(file);
+    buf.lines()
+        .map(|l| l.expect("Could not parse line"))
+        .collect()
+}
+
