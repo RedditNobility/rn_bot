@@ -109,11 +109,23 @@ impl EventHandler for Handler {
             });
             m
         }).await;
+        refresh_server_count(&status).await;
+    }
+    async fn guild_member_removal(&self, status: Context, guild: GuildId, _new: User, _old_if_available: Option<Member>) {
+        refresh_server_count(&status).await;
     }
 }
 
+pub async fn refresh_server_count(status: &Context) {
+    let channel = ChannelId(830636660197687316);
+    let i = channel.to_channel(&status.http).await.unwrap().guild().unwrap().guild_id.members(&status.http, None, None).await.unwrap().len();
+    channel.to_channel(&status.http).await.unwrap().guild().unwrap().edit(&status.http, |c| {
+        c.name(format!("Server Size: {}", i))
+    }).await;
+}
+
 #[group]
-#[commands(about)]
+#[commands(about, serverinfo, minecraft)]
 struct General;
 
 
@@ -184,6 +196,9 @@ use serenity::cache::FromStrAndCache;
 use std::io::{BufReader, BufRead};
 use std::fs::File;
 use serenity::client::bridge::gateway::GatewayIntents;
+use craftping::sync::ping;
+use craftping::{Response, Error};
+use serenity::model::prelude::User;
 
 fn _dispatch_error_no_macro<'fut>(ctx: &'fut mut Context, msg: &'fut Message, error: DispatchError) -> BoxFuture<'fut, ()> {
     async move {
@@ -242,6 +257,26 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+#[command]
+async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
+    let string = msg.guild_id.unwrap().members(&ctx.http, None, None).await.unwrap().len().to_string();
+    let msg = msg.channel_id.send_message(&ctx.http, |m| {
+        m.embed(|e| {
+            e.title("RedditNobility Server Info");
+            e.field("Members", string, true);
+            e.footer(|f| {
+                f.text("Robotic Monarch");
+                f
+            });
+
+            e
+        });
+        m
+    }).await;
+
+    Ok(())
+}
+
 
 fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
     let file = File::open(filename).expect("no such file");
@@ -251,3 +286,79 @@ fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
         .collect()
 }
 
+#[command]
+#[sub_commands(vanilla, modded)]
+async fn minecraft(ctx: &Context, msg: &Message) -> CommandResult {
+    let msg = msg.channel_id.send_message(&ctx.http, |m| {
+        m.embed(|e| {
+            e.title("RedditNobility Minecraft Server Info");
+            e.field("Available Options", "vanilla or modded", true);
+            e.footer(|f| {
+                f.text("Robotic Monarch");
+                f
+            });
+
+            e
+        });
+        m
+    }).await;
+
+    Ok(())
+}
+
+#[command]
+#[aliases("van")]
+#[description("Gets information about the Vanilla MC Server")]
+async fn vanilla(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    let pong: Result<Response, Error> = ping("play.redditnobility.org", 25565);
+    let msg = msg.channel_id.send_message(&ctx.http, |m| {
+        m.embed(|e| {
+            e.title("RedditNobility Minecraft Vanilla Server Info");
+            e.field("IP", "play.redditnobility.org", true);
+            e.field("Online", pong.is_ok(), true);
+            if pong.is_ok() {
+                let response = pong.unwrap();
+                e.field("Minecraft Version", response.version.replace("TuxServer ", ""), true);
+                e.field("Online Players", response.online_players, true);
+            }
+            e.field("Description", "An open vanilla survival game. Open to all nobility and even friend(Just message KingTuxWH or Darth_Dan). Become whitelisted at https://forms.gle/1sxSqtGzpVnKt4jHA", false);
+            e.footer(|f| {
+                f.text("Robotic Monarch");
+                f
+            });
+
+            e
+        });
+        m
+    }).await;
+    Ok(())
+}
+
+#[command]
+#[aliases("mod")]
+#[description("Start a new event!")]
+async fn modded(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    let pong: Result<Response, Error> = ping("play.mod.redditnobility.org", 25579);
+
+    let msg = msg.channel_id.send_message(&ctx.http, |m| {
+        m.embed(|e| {
+            e.title("RedditNobility Minecraft Modded Server Info");
+            e.field("IP", "play.mod.redditnobility.org", true);
+            e.field("Online", pong.is_ok(), true);
+            if pong.is_ok() {
+                let response = pong.unwrap();
+                e.field("Minecraft Version", response.version, true);
+                e.field("Online Players", response.online_players, true);
+            }
+            e.field("Description", "A modded Minecraft server.", false);
+            e.footer(|f| {
+                f.text("Robotic Monarch");
+                f
+            });
+
+            e
+        });
+        m
+    }).await;
+    Ok(())
+}
