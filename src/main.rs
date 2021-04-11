@@ -8,11 +8,10 @@
 //! git = "https://github.com/serenity-rs/serenity.git"
 //! features = ["framework", "standard_framework"]
 //! ```
-mod moderator;
-mod event;
-mod register;
 
-use std::{collections::{HashMap, HashSet}, env, fmt::Write, sync::Arc};
+use diesel::prelude::*;
+use diesel::r2d2::{self};
+use std::{collections::{HashMap, HashSet}, env, fmt::Write};
 use serenity::{
     prelude::*,
     async_trait,
@@ -33,8 +32,22 @@ use serenity::{
     utils::{content_safe, ContentSafeOptions},
 };
 use serenity::prelude::*;
-use tokio::sync::Mutex;
 use rand::seq::SliceRandom;
+use std::sync::{Mutex, Arc};
+
+mod moderator;
+mod event;
+mod register;
+mod schema;
+mod models;
+mod admin;
+mod utils;
+
+#[macro_use]
+extern crate diesel;
+#[macro_use]
+extern crate diesel_migrations;
+
 
 // 0.7.2
 pub struct DataHolder {}
@@ -45,11 +58,13 @@ impl DataHolder {
     }
 }
 
-pub struct Bot {}
+pub struct Bot {
+    pub connection: Arc<Mutex<MysqlConnection>>
+}
 
 impl Bot {
-    fn new() -> Bot {
-        Bot {}
+    fn new(connection: MysqlConnection) -> Bot {
+        Bot { connection: Arc::new(Mutex::new(connection)) }
     }
     fn test(&mut self) {
         println!("test");
@@ -126,13 +141,6 @@ impl EventHandler for Handler {
     }
 }
 
-pub async fn refresh_server_count(status: &Context) {
-    let channel = ChannelId(830636660197687316);
-    let i = channel.to_channel(&status.http).await.unwrap().guild().unwrap().guild_id.members(&status.http, None, None).await.unwrap().len();
-    channel.to_channel(&status.http).await.unwrap().guild().unwrap().edit(&status.http, |c| {
-        c.name(format!("Server Size: {}", i))
-    }).await;
-}
 
 #[group]
 #[commands(about, serverinfo, minecraft)]
@@ -211,6 +219,9 @@ use craftping::{Response, Error};
 use serenity::model::prelude::User;
 use serenity::model::guild::Target::Emoji;
 use serenity::model::channel::{Reaction, ReactionType};
+use diesel::r2d2::{ConnectionManager, PooledConnection};
+use diesel::MysqlConnection;
+use crate::utils::refresh_server_count;
 
 fn _dispatch_error_no_macro<'fut>(ctx: &'fut mut Context, msg: &'fut Message, error: DispatchError) -> BoxFuture<'fut, ()> {
     async move {
@@ -224,10 +235,14 @@ fn _dispatch_error_no_macro<'fut>(ctx: &'fut mut Context, msg: &'fut Message, er
         };
     }.boxed()
 }
-
+embed_migrations!();
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
+    let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL");
+    let result = MysqlConnection::establish(&*connspec).unwrap();
+    embedded_migrations::run_with_output(&result, &mut std::io::stdout());
+
     // Configure the client with your Discord bot token in the environment.
     let token = std::env::var("DISCORD_TOKEN").expect(
         "Expected a token in the environment",
@@ -243,7 +258,7 @@ async fn main() {
         .normal_message(normal_message)
         .on_dispatch_error(dispatch_error)
         .help(&MY_HELP)
-        .group(&GENERAL_GROUP).group(&moderator::MOD_GROUP);
+        .group(&GENERAL_GROUP).group(&moderator::MOD_GROUP).group(&admin::ADMIN_GROUP).group(&register::REGISTER_GROUP);
 
     let mut client = Client::builder(&token)
         .event_handler(Handler)
@@ -254,7 +269,7 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
-        data.insert::<DataHolder>(Bot::new());
+        data.insert::<DataHolder>(Bot::new(result));
     }
 
     if let Err(why) = client.start().await {

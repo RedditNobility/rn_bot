@@ -33,6 +33,8 @@ use hyper_tls::HttpsConnector;
 use serenity::model::guild::Member;
 use serenity::http::CacheHttp;
 use serenity::model::id::RoleId;
+use diesel::MysqlConnection;
+use diesel::prelude::*;
 
 #[group]
 #[commands(register)]
@@ -42,8 +44,10 @@ struct Register;
 #[aliases("login")]
 #[description("Gets you registered to the server")]
 async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    let mut data = ctx.data.write().await;
+    let x: &mut Bot = data.get_mut::<DataHolder>().unwrap();
     let option = _args.current();
-    if is_registered(msg.author.id) {
+    if is_registered(msg.author.id, &x.connection.clone().lock().unwrap()) {
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("You are already registered");
@@ -100,7 +104,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         }).await;
     } else {
         let mut id = msg.channel_id.to_channel(&ctx.http).await.unwrap().guild().unwrap().guild_id.member(&ctx.http, &msg.author.id).await.unwrap();
-        register_user(&ctx, username, id);
+        register_user(&ctx, username, id, &x.connection.clone().lock().unwrap());
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("You have been registered");
@@ -116,7 +120,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-async fn register_user(context: &Context, reddit_username: &str, mut member: Member) {
+async fn register_user(context: &Context, reddit_username: &str, mut member: Member, connect: &MysqlConnection) {
     let x = member.add_role(&context.http, RoleId(830277916944236584)).await;
 }
 
@@ -139,7 +143,7 @@ async fn validate_user(p0: &str) -> Result<bool, String> {
     }
 }
 
-fn is_registered(p0: UserId) -> bool {
+fn is_registered(p0: UserId, connect: &MysqlConnection) -> bool {
     todo!()
 }
 
