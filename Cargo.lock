@@ -8,6 +8,8 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "dotenv",
+ "hyper",
+ "hyper-tls",
  "new-rawr",
  "r2d2",
  "r2d2_mysql",

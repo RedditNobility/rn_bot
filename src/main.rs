@@ -10,6 +10,7 @@
 //! ```
 mod moderator;
 mod event;
+mod register;
 
 use std::{collections::{HashMap, HashSet}, env, fmt::Write, sync::Arc};
 use serenity::{
@@ -71,6 +72,15 @@ impl EventHandler for Handler {
         status.set_activity(Activity::playing("A coup!")).await
     }
     async fn message(&self, ctx: Context, msg: Message) {
+        if msg.channel_id.to_string().eq("829825560930156615") {
+            return;
+        }
+
+        if msg.author.id.to_string().eq("411465364103495680") {
+            if msg.content.contains("*") {
+                msg.react(&ctx.http, '🙄').await;
+            }
+        }
         if msg.is_own(ctx.cache).await { return; }
         let x = ctx.data.read().await;
 
@@ -190,7 +200,7 @@ use serenity::builder::CreateEmbed;
 use serenity::http::routing::RouteInfo::CreateMessage;
 use serenity::http::AttachmentType;
 use std::path::Path;
-use serenity::model::id::{GuildId, ChannelId};
+use serenity::model::id::{GuildId, ChannelId, EmojiId};
 use serenity::model::guild::Member;
 use serenity::cache::FromStrAndCache;
 use std::io::{BufReader, BufRead};
@@ -199,6 +209,8 @@ use serenity::client::bridge::gateway::GatewayIntents;
 use craftping::sync::ping;
 use craftping::{Response, Error};
 use serenity::model::prelude::User;
+use serenity::model::guild::Target::Emoji;
+use serenity::model::channel::{Reaction, ReactionType};
 
 fn _dispatch_error_no_macro<'fut>(ctx: &'fut mut Context, msg: &'fut Message, error: DispatchError) -> BoxFuture<'fut, ()> {
     async move {
@@ -336,9 +348,9 @@ async fn vanilla(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 #[command]
 #[aliases("mod")]
-#[description("Start a new event!")]
+#[description("Gets information about the modded MC Server")]
 async fn modded(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let pong: Result<Response, Error> = ping("play.mod.redditnobility.org", 25579);
+    let pong: Result<Response, Error> = ping("46.105.77.36", 25579);
 
     let msg = msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|e| {
@@ -362,3 +374,4 @@ async fn modded(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }).await;
     Ok(())
 }
+
