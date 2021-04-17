@@ -7,22 +7,22 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel = { version = "1.4.6", features = ["mysql","r2d2"] }
-diesel_migrations =  "1.4.0"
+diesel = { version = "1.4.6", features = ["mysql", "r2d2"] }
+diesel_migrations = "1.4.0"
 r2d2 = "0.8.9"
-r2d2_mysql="*"
+r2d2_mysql = "*"
 dotenv = "0.15.0"
-serde = { version = "1.0", features = [ "derive" ] }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.64"
-new-rawr= {git="https://github.com/wherkamp/new-rawr.git"}
-rand = {git="https://github.com/rust-random/rand"}
+new-rawr = { git = "https://github.com/wherkamp/new-rawr.git" }
+rand = { git = "https://github.com/rust-random/rand" }
 craftping = "0.2.1"
 hyper = "0.14.5"
 hyper-tls = "0.5.0"
 chrono = "0.4.19"
 [dependencies.serenity]
-features = ["framework", "standard_framework", "rustls_backend","model","client"]
-serenity = "0.10.4"
+features = ["framework", "standard_framework", "rustls_backend", "model", "client"]
+version = "0.10.4"
 [dependencies.tokio]
-tokio = "1.4.0"
+version = "1.4.0"
 features = ["macros", "rt-multi-thread"]
