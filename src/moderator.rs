@@ -28,6 +28,7 @@ use crate::{Bot, DataHolder};
 
 #[group]
 #[commands(event)]
+#[allowed_roles("Moderator")]
 struct Mod;
 
 #[command("event")]

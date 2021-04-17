@@ -42,6 +42,7 @@ mod schema;
 mod models;
 mod admin;
 mod utils;
+mod actions;
 
 #[macro_use]
 extern crate diesel;
@@ -59,12 +60,16 @@ impl DataHolder {
 }
 
 pub struct Bot {
-    pub connection: Arc<Mutex<MysqlConnection>>
+    pub connection: Arc<Mutex<MysqlConnection>>,
+    pub start_time: DateTime<Local>,
 }
 
 impl Bot {
     fn new(connection: MysqlConnection) -> Bot {
-        Bot { connection: Arc::new(Mutex::new(connection)) }
+        Bot {
+            connection: Arc::new(Mutex::new(connection)),
+            start_time: Local::now(),
+        }
     }
     fn test(&mut self) {
         println!("test");
@@ -143,7 +148,7 @@ impl EventHandler for Handler {
 
 
 #[group]
-#[commands(about, serverinfo, minecraft)]
+#[commands(about, serverinfo, minecraft, botinfo)]
 struct General;
 
 
@@ -155,7 +160,7 @@ If you want more information about a specific command, just pass the command as 
 #[max_levenshtein_distance(3)]
 #[indention_prefix = "+"]
 #[lacking_permissions = "Hide"]
-#[lacking_role = "Nothing"]
+#[lacking_role = "Hide"]
 #[wrong_channel = "Strike"]
 async fn my_help(
     context: &Context,
@@ -222,6 +227,9 @@ use serenity::model::channel::{Reaction, ReactionType};
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::MysqlConnection;
 use crate::utils::refresh_server_count;
+use std::time::Instant;
+use chrono::{Local, DateTime, Duration};
+use std::ops::Sub;
 
 fn _dispatch_error_no_macro<'fut>(ctx: &'fut mut Context, msg: &'fut Message, error: DispatchError) -> BoxFuture<'fut, ()> {
     async move {
@@ -288,6 +296,7 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
 async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
     let string = msg.guild_id.unwrap().members(&ctx.http, None, None).await.unwrap().len().to_string();
     let msg = msg.channel_id.send_message(&ctx.http, |m| {
+        m.reference_message(msg);
         m.embed(|e| {
             e.title("RedditNobility Server Info");
             e.field("Members", string, true);
@@ -304,6 +313,48 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+#[command]
+async fn botinfo(ctx: &Context, msg: &Message) -> CommandResult {
+    let mut data = ctx.data.write().await;
+    let x: &mut Bot = data.get_mut::<DataHolder>().unwrap();
+    let msg = msg.channel_id.send_message(&ctx.http, |m| {
+        m.reference_message(msg);
+        m.embed(|e| {
+            e.title("Robotic Monarch Bot Info");
+            e.field("Uptime", Local::now().sub(x.start_time).format(), true);
+            e.footer(|f| {
+                f.text("Robotic Monarch");
+                f
+            });
+
+            e
+        });
+        m
+    }).await;
+
+    Ok(())
+}
+
+pub trait DurationFormat {
+    fn format(&self) -> String;
+}
+
+impl DurationFormat for Duration {
+    fn format(&self) -> String {
+        let days = self.num_days();
+        let hours = self.num_hours() - (days * 24);
+        let minutes = self.num_minutes() - (self.num_hours() * 60);
+        let seconds = self.num_seconds() - (self.num_minutes() * 60);
+        if days > 0 {
+            return format!("{} days {} hours {} minutes {} seconds", days, hours, minutes, seconds);
+        } else if hours > 0 {
+            return format!("{} hours {} minutes {} seconds", hours, minutes, seconds);
+        } else if minutes > 0 {
+            return format!(" {} minutes {} seconds", minutes, seconds);
+        }
+        return format!("{} seconds", seconds);
+    }
+}
 
 fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
     let file = File::open(filename).expect("no such file");
@@ -317,6 +368,7 @@ fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
 #[sub_commands(vanilla, modded)]
 async fn minecraft(ctx: &Context, msg: &Message) -> CommandResult {
     let msg = msg.channel_id.send_message(&ctx.http, |m| {
+        m.reference_message(msg);
         m.embed(|e| {
             e.title("RedditNobility Minecraft Server Info");
             e.field("Available Options", "vanilla or modded", true);
@@ -339,6 +391,7 @@ async fn minecraft(ctx: &Context, msg: &Message) -> CommandResult {
 async fn vanilla(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let pong: Result<Response, Error> = ping("play.redditnobility.org", 25565);
     let msg = msg.channel_id.send_message(&ctx.http, |m| {
+        m.reference_message(msg);
         m.embed(|e| {
             e.title("RedditNobility Minecraft Vanilla Server Info");
             e.field("IP", "play.redditnobility.org", true);
@@ -368,6 +421,7 @@ async fn modded(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let pong: Result<Response, Error> = ping("46.105.77.36", 25579);
 
     let msg = msg.channel_id.send_message(&ctx.http, |m| {
+        m.reference_message(msg);
         m.embed(|e| {
             e.title("RedditNobility Minecraft Modded Server Info");
             e.field("IP", "play.mod.redditnobility.org", true);
@@ -389,4 +443,5 @@ async fn modded(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }).await;
     Ok(())
 }
+
 

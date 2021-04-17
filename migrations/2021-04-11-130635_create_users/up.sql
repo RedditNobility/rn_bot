@@ -1,7 +1,7 @@
 CREATE TABLE users
 (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    username        TEXT,
+    discord_id        TEXT,
     reddit_username TEXT,
     created         BIGINT
 )

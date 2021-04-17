@@ -1,11 +1,14 @@
 use serde::{Serialize, Deserialize};
-use diesel::{Queryable};
-use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Event {
-    pub id: i64,
+pub struct NewEvent {
     pub name: String,
-    pub description: String
+    pub description: String,
+    pub creator: Option<String>,
+}
 
+impl NewEvent {
+    pub fn set_creator(&mut self, creator: String) {
+        self.creator = Option::Some(creator);
+    }
 }

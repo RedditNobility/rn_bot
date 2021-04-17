@@ -134,7 +134,7 @@ async fn validate_user(p0: &str) -> Result<bool, String> {
     if response.status().is_success() {
         let bytes = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let string = String::from_utf8(bytes.to_vec()).unwrap();
-        let user: Fuser = serde_json::from_str(&*string).unwrap();
+        let user: WebsiteUser = serde_json::from_str(&*string).unwrap();
         return Ok(user.status == "Approved");
     } else if response.status().as_u16() == 404 {
         return Ok(false);
@@ -148,7 +148,7 @@ fn is_registered(p0: UserId, connect: &MysqlConnection) -> bool {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Fuser {
+pub struct WebsiteUser {
     pub id: i64,
     pub username: String,
     pub status: String,
