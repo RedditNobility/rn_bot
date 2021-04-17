@@ -1,6 +1,6 @@
 CREATE TABLE events
 (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    eid          BIGINT AUTO_INCREMENT PRIMARY KEY,
     name        TEXT,
     description TEXT,
     creator     TEXT,

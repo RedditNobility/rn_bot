@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use std::fmt::{Display, Formatter, Error};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewEvent {
@@ -10,5 +11,11 @@ pub struct NewEvent {
 impl NewEvent {
     pub fn set_creator(&mut self, creator: String) {
         self.creator = Option::Some(creator);
+    }
+}
+
+impl Display for NewEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "{}", serde_json::to_string(self).unwrap())
     }
 }

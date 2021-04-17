@@ -7,7 +7,7 @@ use std::time::{UNIX_EPOCH, SystemTime};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable)]
 pub struct User {
-    pub id: i64,
+    pub uid: i64,
     pub discord_id: String,
     pub reddit_username: String,
     pub created: i64,
@@ -16,7 +16,7 @@ pub struct User {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable)]
 pub struct Event {
-    pub id: i64,
+    pub eid: i64,
     pub name: String,
     pub description: String,
     pub creator: String,
@@ -28,7 +28,7 @@ pub struct Event {
 impl Event {
     pub fn create(new_event: NewEvent) -> Event {
         Event {
-            id: 0,
+            eid: 0,
             name: new_event.name.clone(),
             description: new_event.description.clone(),
             creator: new_event.creator.unwrap().clone(),

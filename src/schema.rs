@@ -1,14 +1,14 @@
 table! {
-    users (id) {
-        id -> Bigint,
+    users (uid) {
+        uid -> Bigint,
         discord_id -> Text,
         reddit_username -> Text,
         created ->Bigint,
     }
 }
 table! {
-    events (id) {
-        id -> Bigint,
+    events (eid) {
+        eid -> Bigint,
         name -> Text,
         description -> Text,
         creator -> Text,
