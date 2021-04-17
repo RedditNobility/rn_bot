@@ -23,7 +23,7 @@ use serenity::{
 use serde::{Serialize, Deserialize};
 use serenity::prelude::*;
 use tokio::sync::Mutex;
-use crate::{Bot, DataHolder};
+use crate::{Bot, DataHolder, actions};
 use hyper::{Body, Method, Request, StatusCode};
 use hyper::client::{Client, HttpConnector};
 use hyper::header::USER_AGENT;
@@ -35,6 +35,8 @@ use serenity::http::CacheHttp;
 use serenity::model::id::RoleId;
 use diesel::MysqlConnection;
 use diesel::prelude::*;
+use crate::models::User;
+use std::time::{UNIX_EPOCH, SystemTime};
 
 #[group]
 #[commands(register)]
@@ -47,6 +49,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let mut data = ctx.data.write().await;
     let x: &mut Bot = data.get_mut::<DataHolder>().unwrap();
     let option = _args.current();
+
     if is_registered(msg.author.id, &x.connection.clone().lock().unwrap()) {
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
@@ -74,8 +77,8 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             m
         }).await;
     }
-    let username = option.unwrap();
-    let user = validate_user(username).await;
+    let username = option.unwrap().replace("u/", "");
+    let user = validate_user(&*username).await;
 
     if user.is_err() {
         msg.channel_id.send_message(&ctx.http, |m| {
@@ -104,7 +107,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         }).await;
     } else {
         let mut id = msg.channel_id.to_channel(&ctx.http).await.unwrap().guild().unwrap().guild_id.member(&ctx.http, &msg.author.id).await.unwrap();
-        register_user(&ctx, username, id, &x.connection.clone().lock().unwrap());
+        register_user(&ctx, &*username, id, &x.connection.clone().lock().unwrap());
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("You have been registered");
@@ -122,6 +125,14 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 async fn register_user(context: &Context, reddit_username: &str, mut member: Member, connect: &MysqlConnection) {
     let x = member.add_role(&context.http, RoleId(830277916944236584)).await;
+    let user = User {
+        uid: 0,
+        discord_id: member.user.id.to_string(),
+        reddit_username: reddit_username.to_string().clone(),
+        created: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64,
+    };
+    let result = actions::add_user(&user, connect);
+
 }
 
 
@@ -130,7 +141,11 @@ async fn validate_user(p0: &str) -> Result<bool, String> {
     let client = Client::builder().build::<_, hyper::Body>(https);
     let mut builder = (Builder::new()).header(USER_AGENT, "RedditNobilityBot").method(Method::GET).uri(format!("http://127.0.0.1:6742/api/user/{}", p0));
     let request = builder.body(Body::empty()).unwrap();
-    let response = client.request(request).await.unwrap();
+    let result = client.request(request).await;
+    if result.is_err() {
+        return Err("Unable to connect".to_string());
+    }
+    let response = result.unwrap();
     if response.status().is_success() {
         let bytes = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let string = String::from_utf8(bytes.to_vec()).unwrap();
@@ -144,7 +159,12 @@ async fn validate_user(p0: &str) -> Result<bool, String> {
 }
 
 fn is_registered(p0: UserId, connect: &MysqlConnection) -> bool {
-    todo!()
+    let x = actions::get_user_by_discord(p0.0.to_string(), connect);
+    if x.is_err() {
+        panic!("Unable to make proper SQL call");
+    }
+    let result = x.unwrap();
+    return result.is_some();
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

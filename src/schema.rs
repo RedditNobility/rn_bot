@@ -13,6 +13,7 @@ table! {
         description -> Text,
         creator -> Text,
         active -> Bool,
+        discord_channel ->Bigint,
         end ->Nullable<Bigint>,
         created ->Bigint,
     }
