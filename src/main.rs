@@ -260,7 +260,7 @@ async fn main() {
     let framework = StandardFramework::new()
         .configure(|c| c
             .with_whitespace(true)
-            .prefix("!")
+            .prefix(&*std::env::var("COMMAND").unwrap_or("!".to_string()))
             .delimiters(vec![", ", ","]))
         .unrecognised_command(unknown_command)
         .normal_message(normal_message)
@@ -322,6 +322,7 @@ async fn botinfo(ctx: &Context, msg: &Message) -> CommandResult {
         m.embed(|e| {
             e.title("Robotic Monarch Bot Info");
             e.field("Uptime", Local::now().sub(x.start_time).format(), true);
+            e.field("Host", hostname::get().unwrap().to_str().unwrap(), false);
             e.footer(|f| {
                 f.text("Robotic Monarch");
                 f
