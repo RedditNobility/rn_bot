@@ -50,7 +50,9 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let mut data = ctx.data.write().await;
     let x: &mut Bot = data.get_mut::<DataHolder>().unwrap();
     let option = _args.current();
-
+    if x.connection.is_poisoned() {
+        x.reset_connection();
+    }
     if is_registered(msg.author.id, &x.connection.clone().lock().unwrap()) {
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {

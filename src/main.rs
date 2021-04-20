@@ -66,6 +66,14 @@ pub struct Bot {
 }
 
 impl Bot {
+    pub fn reset_connection(&mut self) {
+        let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL");
+        let result = MysqlConnection::establish(&*connspec).unwrap();
+        self.connection = Arc::new(Mutex::new(result));
+    }
+}
+
+impl Bot {
     fn new(connection: MysqlConnection, client: Option<RedditClient>) -> Bot {
         Bot {
             connection: Arc::new(Mutex::new(connection)),
@@ -95,7 +103,6 @@ impl EventHandler for Handler {
         println!("{} is connected!", ready.user.name);
         status.online().await;
         status.set_activity(Activity::playing("A coup!")).await;
-
     }
     async fn message(&self, ctx: Context, msg: Message) {
         if msg.channel_id.to_string().eq("829825560930156615") {
