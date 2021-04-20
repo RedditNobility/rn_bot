@@ -141,6 +141,9 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 async fn register_user(context: &Context, reddit_username: &str, mut member: Member, connect: &Arc<std::sync::Mutex<MysqlConnection>>) {
     let x = member.add_role(&context.http, RoleId(830277916944236584)).await;
+    member.edit(&context.http, |e| {
+        e.nickname(reddit_username.clone().to_string())
+    }).await;
     let user = User {
         uid: 0,
         discord_id: member.user.id.to_string(),
