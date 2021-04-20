@@ -65,6 +65,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         }).await;
         return Ok(());
     }
+
     if option.is_none() {
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
@@ -80,7 +81,21 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
     let username = option.unwrap().replace("u/", "");
     let user = validate_user(&*username).await;
-
+    if is_registered_reddit(username.clone(), &x.connection.clone().lock().unwrap()) {
+        msg.channel_id.send_message(&ctx.http, |m| {
+            m.embed(|e| {
+                e.title("That name has already been claimed.");
+                e.description("If this is you please contact a mod for help.");
+                e.footer(|f| {
+                    f.text("Robotic Monarch");
+                    f
+                });
+                e
+            });
+            m
+        }).await;
+        return Ok(());
+    }
     if user.is_err() {
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
@@ -93,7 +108,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             });
             m
         }).await;
-    } else if !user.is_ok() && !user.unwrap() {
+    } else if !user.unwrap() {
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("Your username is not found in the database.");
@@ -160,6 +175,15 @@ async fn validate_user(p0: &str) -> Result<bool, String> {
 
 fn is_registered(p0: UserId, connect: &MysqlConnection) -> bool {
     let x = actions::get_user_by_discord(p0.0.to_string(), connect);
+    if x.is_err() {
+        panic!("Unable to make proper SQL call");
+    }
+    let result = x.unwrap();
+    return result.is_some();
+}
+
+fn is_registered_reddit(p0: String, connect: &MysqlConnection) -> bool {
+    let x = actions::get_user_by_reddit(p0, connect);
     if x.is_err() {
         panic!("Unable to make proper SQL call");
     }
