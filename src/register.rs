@@ -37,6 +37,7 @@ use diesel::MysqlConnection;
 use diesel::prelude::*;
 use crate::models::User;
 use std::time::{UNIX_EPOCH, SystemTime};
+use std::sync::MutexGuard;
 
 #[group]
 #[commands(register)]
@@ -107,7 +108,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         }).await;
     } else {
         let mut id = msg.channel_id.to_channel(&ctx.http).await.unwrap().guild().unwrap().guild_id.member(&ctx.http, &msg.author.id).await.unwrap();
-        register_user(&ctx, &*username, id, &x.connection.clone().lock().unwrap());
+        register_user(&ctx, &*username, id, &x.connection.clone()).await;
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("You have been registered");
@@ -123,7 +124,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-async fn register_user(context: &Context, reddit_username: &str, mut member: Member, connect: &MysqlConnection) {
+async fn register_user(context: &Context, reddit_username: &str, mut member: Member, connect: &Arc<std::sync::Mutex<MysqlConnection>>) {
     let x = member.add_role(&context.http, RoleId(830277916944236584)).await;
     let user = User {
         uid: 0,
@@ -131,15 +132,14 @@ async fn register_user(context: &Context, reddit_username: &str, mut member: Mem
         reddit_username: reddit_username.to_string().clone(),
         created: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64,
     };
-    let result = actions::add_user(&user, connect);
-
+    let result = actions::add_user(&user, &connect.lock().unwrap());
 }
 
 
 async fn validate_user(p0: &str) -> Result<bool, String> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
-    let mut builder = (Builder::new()).header(USER_AGENT, "RedditNobilityBot").method(Method::GET).uri(format!("http://127.0.0.1:6742/api/user/{}", p0));
+    let mut builder = (Builder::new()).header(USER_AGENT, "RedditNobilityBot").method(Method::GET).uri(format!("https://redditnobility.org/api/user/{}", p0));
     let request = builder.body(Body::empty()).unwrap();
     let result = client.request(request).await;
     if result.is_err() {
