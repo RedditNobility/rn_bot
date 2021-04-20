@@ -181,7 +181,7 @@ async fn validate_user(p0: &str) -> Result<bool, String> {
 fn is_registered(p0: UserId, connect: &MysqlConnection) -> bool {
     let x = actions::get_user_by_discord(p0.0.to_string(), connect);
     if x.is_err() {
-        panic!("Unable to make proper SQL call");
+        panic!("Unable to make proper SQL call {}", x.err().unwrap());
     }
     let result = x.unwrap();
     return result.is_some();
@@ -190,7 +190,7 @@ fn is_registered(p0: UserId, connect: &MysqlConnection) -> bool {
 fn is_registered_reddit(p0: String, connect: &MysqlConnection) -> bool {
     let x = actions::get_user_by_reddit(p0, connect);
     if x.is_err() {
-        panic!("Unable to make proper SQL call");
+        panic!("Unable to make proper SQL call {}", x.err().unwrap());
     }
     let result = x.unwrap();
     return result.is_some();
