@@ -11,7 +11,7 @@
 
 use diesel::prelude::*;
 use diesel::r2d2::{self};
-use std::{collections::{HashMap, HashSet}, env, fmt::Write};
+use std::{collections::{HashMap, HashSet}, env, fmt::Write, thread};
 use serenity::{
     prelude::*,
     async_trait,
@@ -62,14 +62,19 @@ impl DataHolder {
 pub struct Bot {
     pub connection: Arc<Mutex<MysqlConnection>>,
     pub start_time: DateTime<Local>,
+    pub reddit: Option<RedditClient>,
 }
 
 impl Bot {
-    fn new(connection: MysqlConnection) -> Bot {
+    fn new(connection: MysqlConnection, client: Option<RedditClient>) -> Bot {
         Bot {
             connection: Arc::new(Mutex::new(connection)),
             start_time: Local::now(),
+            reddit: client,
         }
+    }
+    fn set_client(&mut self, client: RedditClient) {
+        self.reddit = Some(client)
     }
     fn test(&mut self) {
         println!("test");
@@ -89,7 +94,8 @@ impl EventHandler for Handler {
     async fn ready(&self, status: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
         status.online().await;
-        status.set_activity(Activity::playing("A coup!")).await
+        status.set_activity(Activity::playing("A coup!")).await;
+
     }
     async fn message(&self, ctx: Context, msg: Message) {
         if msg.channel_id.to_string().eq("829825560930156615") {
@@ -226,10 +232,13 @@ use serenity::model::guild::Target::Emoji;
 use serenity::model::channel::{Reaction, ReactionType};
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::MysqlConnection;
-use crate::utils::refresh_server_count;
+use crate::utils::{refresh_server_count, refresh_reddit_count};
 use std::time::Instant;
 use chrono::{Local, DateTime, Duration};
 use std::ops::Sub;
+use new_rawr::auth::PasswordAuthenticator;
+use new_rawr::client::RedditClient;
+use std::thread::sleep;
 
 fn _dispatch_error_no_macro<'fut>(ctx: &'fut mut Context, msg: &'fut Message, error: DispatchError) -> BoxFuture<'fut, ()> {
     async move {
@@ -274,11 +283,11 @@ async fn main() {
         .await
         .expect("Err creating client");
 
-
     {
         let mut data = client.data.write().await;
-        data.insert::<DataHolder>(Bot::new(result));
+        data.insert::<DataHolder>(Bot::new(result, None));
     }
+
 
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
