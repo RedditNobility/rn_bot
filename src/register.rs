@@ -38,6 +38,7 @@ use diesel::prelude::*;
 use crate::models::User;
 use std::time::{UNIX_EPOCH, SystemTime};
 use std::sync::MutexGuard;
+use crate::boterror::BotError;
 
 #[group]
 #[commands(register)]
@@ -53,7 +54,13 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     if x.connection.is_poisoned() {
         x.reset_connection();
     }
-    if is_registered(msg.author.id, &x.connection.clone().lock().unwrap()) {
+    let result = is_registered(msg.author.id, &x.connection.clone().lock().unwrap());
+    if result.is_err() {
+        //    pub async fn discord_message(&self, message: &Message, error: &str, context: &Context) {
+        result.err().unwrap().discord_message(msg, "Unable to make database query.", &ctx).await;
+        return Ok(());
+    }
+    if result.unwrap() {
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("You are already registered");
@@ -83,7 +90,13 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
     let username = option.unwrap().replace("u/", "");
     let user = validate_user(&*username).await;
-    if is_registered_reddit(username.clone(), &x.connection.clone().lock().unwrap()) {
+    let result1 = is_registered_reddit(username.clone(), &x.connection.clone().lock().unwrap());
+    if result1.is_err() {
+        //    pub async fn discord_message(&self, message: &Message, error: &str, context: &Context) {
+        result1.err().unwrap().discord_message(msg, "Unable to verify Reddit Name.", &ctx).await;
+        return Ok(());
+    }
+    if result1.unwrap() {
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("That name has already been claimed.");
@@ -99,17 +112,8 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         return Ok(());
     }
     if user.is_err() {
-        msg.channel_id.send_message(&ctx.http, |m| {
-            m.embed(|e| {
-                e.title(user.err().unwrap());
-                e.footer(|f| {
-                    f.text("Robotic Monarch");
-                    f
-                });
-                e
-            });
-            m
-        }).await;
+        result1.err().unwrap().discord_message(msg, "Unable to verify Reddit Name.", &ctx).await;
+        return Ok(());
     } else if !user.unwrap() {
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
@@ -141,11 +145,14 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-async fn register_user(context: &Context, reddit_username: &str, mut member: Member, connect: &Arc<std::sync::Mutex<MysqlConnection>>) {
+async fn register_user(context: &Context, reddit_username: &str, mut member: Member, connect: &Arc<std::sync::Mutex<MysqlConnection>>) -> Result<(), BotError> {
     let x = member.add_role(&context.http, RoleId(830277916944236584)).await;
     member.edit(&context.http, |e| {
         e.nickname(reddit_username.clone().to_string())
     }).await;
+    if x.is_err() {
+        return Err(BotError::SerenityError(x.err().unwrap()));
+    }
     let user = User {
         uid: 0,
         discord_id: member.user.id.to_string(),
@@ -153,17 +160,25 @@ async fn register_user(context: &Context, reddit_username: &str, mut member: Mem
         created: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64,
     };
     let result = actions::add_user(&user, &connect.lock().unwrap());
+    if result.is_err() {
+        return Err(BotError::DBError(result.err().unwrap()));
+    }
+    return Ok(());
 }
 
 
-async fn validate_user(p0: &str) -> Result<bool, String> {
+async fn validate_user(p0: &str) -> Result<bool, BotError> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
-    let mut builder = (Builder::new()).header(USER_AGENT, "RedditNobilityBot").method(Method::GET).uri(format!("https://redditnobility.org/api/user/{}", p0));
-    let request = builder.body(Body::empty()).unwrap();
+    let mut builder = (Builder::new()).header(USER_AGENT, "RedditNobilityBot").method(Method::GET).uri(format!("https://redditnobisslity.org/api/user/{}", p0));
+    let result1 = builder.body(Body::empty());
+    if result1.is_err() {
+        return Err(BotError::HyperHTTPError(result1.err().unwrap()));
+    }
+    let request = result1.unwrap();
     let result = client.request(request).await;
     if result.is_err() {
-        return Err("Unable to connect".to_string());
+        return Err(BotError::HyperError(result.err().unwrap()));
     }
     let response = result.unwrap();
     if response.status().is_success() {
@@ -174,26 +189,26 @@ async fn validate_user(p0: &str) -> Result<bool, String> {
     } else if response.status().as_u16() == 404 {
         return Ok(false);
     } else {
-        return Err("Unable to connect".to_string());
+        return Err(BotError::HTTPError(response.status().clone()));
     }
 }
 
-fn is_registered(p0: UserId, connect: &MysqlConnection) -> bool {
+fn is_registered(p0: UserId, connect: &MysqlConnection) -> Result<bool, BotError> {
     let x = actions::get_user_by_discord(p0.0.to_string(), connect);
     if x.is_err() {
-        panic!("Unable to make proper SQL call {}", x.err().unwrap());
+        return Err(BotError::DBError(x.err().unwrap()));
     }
     let result = x.unwrap();
-    return result.is_some();
+    return Ok(result.is_some());
 }
 
-fn is_registered_reddit(p0: String, connect: &MysqlConnection) -> bool {
+fn is_registered_reddit(p0: String, connect: &MysqlConnection) -> Result<bool, BotError> {
     let x = actions::get_user_by_reddit(p0, connect);
     if x.is_err() {
-        panic!("Unable to make proper SQL call {}", x.err().unwrap());
+        return Err(BotError::DBError(x.err().unwrap()));
     }
     let result = x.unwrap();
-    return result.is_some();
+    return Ok(result.is_some());
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

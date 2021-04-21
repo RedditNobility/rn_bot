@@ -43,6 +43,7 @@ mod models;
 mod admin;
 mod utils;
 mod actions;
+mod boterror;
 
 #[macro_use]
 extern crate diesel;

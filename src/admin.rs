@@ -34,3 +34,5 @@ async fn rcount(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     utils::refresh_server_count(ctx).await;
     Ok(())
 }
+
+
