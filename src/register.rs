@@ -112,7 +112,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         return Ok(());
     }
     if user.is_err() {
-        result1.err().unwrap().discord_message(msg, "Unable to verify Reddit Name.", &ctx).await;
+        user.err().unwrap().discord_message(msg, "Unable to verify Reddit Name.", &ctx).await;
         return Ok(());
     } else if !user.unwrap() {
         msg.channel_id.send_message(&ctx.http, |m| {
