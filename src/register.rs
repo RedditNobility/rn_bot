@@ -56,8 +56,8 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
     let result = is_registered(msg.author.id, &x.connection.clone().lock().unwrap());
     if result.is_err() {
-        //    pub async fn discord_message(&self, message: &Message, error: &str, context: &Context) {
-        result.err().unwrap().discord_message(msg, "Unable to make database query.", &ctx).await;
+        x.reset_connection();
+        result.err().unwrap().discord_message(msg, "Unable to make database query. Please try again.", &ctx).await;
         return Ok(());
     }
     if result.unwrap() {
