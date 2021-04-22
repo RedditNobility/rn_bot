@@ -170,7 +170,7 @@ async fn register_user(context: &Context, reddit_username: &str, mut member: Mem
 async fn validate_user(p0: &str) -> Result<bool, BotError> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
-    let mut builder = (Builder::new()).header(USER_AGENT, "RedditNobilityBot").method(Method::GET).uri(format!("https://redditnobisslity.org/api/user/{}", p0));
+    let mut builder = (Builder::new()).header(USER_AGENT, "RedditNobilityBot").method(Method::GET).uri(format!("https://redditnobility.org/api/user/{}", p0));
     let result1 = builder.body(Body::empty());
     if result1.is_err() {
         return Err(BotError::HyperHTTPError(result1.err().unwrap()));
