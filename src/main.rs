@@ -50,6 +50,13 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
+type DbPoolType = Arc<r2d2::Pool<ConnectionManager<MysqlConnection>>>;
+
+pub struct DbPool(DbPoolType);
+
+impl TypeMapKey for DbPool {
+    type Value = DbPoolType;
+}
 
 // 0.7.2
 pub struct DataHolder {}
@@ -61,23 +68,14 @@ impl DataHolder {
 }
 
 pub struct Bot {
-    pub connection: Arc<Mutex<MysqlConnection>>,
     pub start_time: DateTime<Local>,
     pub reddit: Option<RedditClient>,
 }
 
-impl Bot {
-    pub fn reset_connection(&mut self) {
-        let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL");
-        let result = MysqlConnection::establish(&*connspec).unwrap();
-        self.connection = Arc::new(Mutex::new(result));
-    }
-}
 
 impl Bot {
-    fn new(connection: MysqlConnection, client: Option<RedditClient>) -> Bot {
+    fn new(client: Option<RedditClient>) -> Bot {
         Bot {
-            connection: Arc::new(Mutex::new(connection)),
             start_time: Local::now(),
             reddit: client,
         }
@@ -265,9 +263,13 @@ embed_migrations!();
 async fn main() {
     dotenv::dotenv().ok();
     let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL");
-    let result = MysqlConnection::establish(&*connspec).unwrap();
-    embedded_migrations::run_with_output(&result, &mut std::io::stdout());
-
+    let manager = ConnectionManager::<MysqlConnection>::new(connspec);
+    let pool = r2d2::Pool::builder()
+        .build(manager)
+        .expect("Failed to create pool.");
+    let connection = pool.get().unwrap();
+    embedded_migrations::run_with_output(&connection, &mut std::io::stdout());
+    let final_pool = Arc::new(pool);
     // Configure the client with your Discord bot token in the environment.
     let token = std::env::var("DISCORD_TOKEN").expect(
         "Expected a token in the environment",
@@ -293,7 +295,8 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
-        data.insert::<DataHolder>(Bot::new(result, None));
+        data.insert::<DataHolder>(Bot::new(None));
+        data.insert::<DbPool>(final_pool.clone());
     }
 
 

@@ -23,7 +23,7 @@ use serenity::{
 use serde::{Serialize, Deserialize};
 use serenity::prelude::*;
 use tokio::sync::Mutex;
-use crate::{Bot, DataHolder, actions};
+use crate::{Bot, DataHolder, actions, DbPoolType, DbPool};
 use hyper::{Body, Method, Request, StatusCode};
 use hyper::client::{Client, HttpConnector};
 use hyper::header::USER_AGENT;
@@ -48,15 +48,17 @@ struct Register;
 #[aliases("login")]
 #[description("Gets you registered to the server")]
 async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let mut data = ctx.data.write().await;
-    let x: &mut Bot = data.get_mut::<DataHolder>().unwrap();
+    let mut data = ctx.data.read().await;
+    let x: & Bot = data.get::<DataHolder>().unwrap();
     let option = _args.current();
-    if x.connection.is_poisoned() {
-        x.reset_connection();
+    let pool: &DbPoolType = data.get::<DbPool>().unwrap();
+    let conn = pool.get();
+    if conn.is_err() {
+        //TODO handle
     }
-    let result = is_registered(msg.author.id, &x.connection.clone().lock().unwrap());
+    let conn = conn.unwrap();
+    let result = is_registered(msg.author.id, &conn);
     if result.is_err() {
-        x.reset_connection();
         result.err().unwrap().discord_message(msg, "Unable to make database query. Please try again.", &ctx).await;
         return Ok(());
     }
@@ -90,7 +92,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
     let username = option.unwrap().replace("u/", "");
     let user = validate_user(&*username).await;
-    let result1 = is_registered_reddit(username.clone(), &x.connection.clone().lock().unwrap());
+    let result1 = is_registered_reddit(username.clone(), &conn);
     if result1.is_err() {
         //    pub async fn discord_message(&self, message: &Message, error: &str, context: &Context) {
         result1.err().unwrap().discord_message(msg, "Unable to verify Reddit Name.", &ctx).await;
@@ -129,7 +131,8 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         }).await;
     } else {
         let mut id = msg.channel_id.to_channel(&ctx.http).await.unwrap().guild().unwrap().guild_id.member(&ctx.http, &msg.author.id).await.unwrap();
-        register_user(&ctx, &*username, id, &x.connection.clone()).await;
+        register_user(&*username, &id, &conn);
+        register_user_discord(&ctx,  &*username,id);
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("You have been registered");
@@ -145,7 +148,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-async fn register_user(context: &Context, reddit_username: &str, mut member: Member, connect: &Arc<std::sync::Mutex<MysqlConnection>>) -> Result<(), BotError> {
+async fn register_user_discord(context: &Context, reddit_username: &str, mut member: Member)  -> Result<(), BotError> {
     let x = member.add_role(&context.http, RoleId(830277916944236584)).await;
     member.edit(&context.http, |e| {
         e.nickname(reddit_username.clone().to_string())
@@ -153,13 +156,18 @@ async fn register_user(context: &Context, reddit_username: &str, mut member: Mem
     if x.is_err() {
         return Err(BotError::SerenityError(x.err().unwrap()));
     }
+    return Ok(());
+}
+
+fn register_user(reddit_username: &str, mut member: &Member, conn: &MysqlConnection) -> Result<(), BotError> {
+
     let user = User {
         uid: 0,
         discord_id: member.user.id.to_string(),
         reddit_username: reddit_username.to_string().clone(),
         created: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64,
     };
-    let result = actions::add_user(&user, &connect.lock().unwrap());
+    let result = actions::add_user(&user, &conn);
     if result.is_err() {
         return Err(BotError::DBError(result.err().unwrap()));
     }
