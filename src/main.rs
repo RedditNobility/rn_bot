@@ -96,6 +96,7 @@ impl Bot {}
 
 struct Handler;
 
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, status: Context, ready: Ready) {
@@ -104,6 +105,17 @@ impl EventHandler for Handler {
         status.set_activity(Activity::playing("A coup!")).await;
     }
     async fn message(&self, ctx: Context, msg: Message) {
+        if msg.channel_id.to_string().eq("839636449778466816") {
+            if msg.content.eq("68") {
+                let mut webhook:Webhook = ctx.http.get_webhook(837638263941496912).await.unwrap();
+                webhook.execute(&ctx.http, false, |mut w| {
+                    w.content("69");
+                    w.username("KingTux");
+                    w.avatar_url("https://cdn.discordapp.com/avatars/202162280039841792/dbb8651f40edb75c11e19f2ce9f72c0b.png");
+                    w
+                }).await;
+            }
+        }
         if msg.channel_id.to_string().eq("829825560930156615") {
             return;
         }
@@ -245,6 +257,7 @@ use std::ops::Sub;
 use new_rawr::auth::PasswordAuthenticator;
 use new_rawr::client::RedditClient;
 use std::thread::sleep;
+use serenity::model::webhook::Webhook;
 
 fn _dispatch_error_no_macro<'fut>(ctx: &'fut mut Context, msg: &'fut Message, error: DispatchError) -> BoxFuture<'fut, ()> {
     async move {
