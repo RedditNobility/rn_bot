@@ -49,7 +49,7 @@ struct Register;
 #[description("Gets you registered to the server")]
 async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let mut data = ctx.data.read().await;
-    let x: & Bot = data.get::<DataHolder>().unwrap();
+    let x: &Bot = data.get::<DataHolder>().unwrap();
     let option = _args.current();
     let pool: &DbPoolType = data.get::<DbPool>().unwrap();
     let conn = pool.get();
@@ -89,6 +89,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             });
             m
         }).await;
+        return Ok(());
     }
     let username = option.unwrap().replace("u/", "");
     let user = validate_user(&*username).await;
@@ -132,7 +133,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     } else {
         let mut id = msg.channel_id.to_channel(&ctx.http).await.unwrap().guild().unwrap().guild_id.member(&ctx.http, &msg.author.id).await.unwrap();
         register_user(&*username, &id, &conn);
-        register_user_discord(&ctx,  &*username,id);
+        register_user_discord(&ctx, &*username, id).await;
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("You have been registered");
@@ -148,7 +149,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-async fn register_user_discord(context: &Context, reddit_username: &str, mut member: Member)  -> Result<(), BotError> {
+async fn register_user_discord(context: &Context, reddit_username: &str, mut member: Member) -> Result<(), BotError> {
     let x = member.add_role(&context.http, RoleId(830277916944236584)).await;
     member.edit(&context.http, |e| {
         e.nickname(reddit_username.clone().to_string())
@@ -160,7 +161,6 @@ async fn register_user_discord(context: &Context, reddit_username: &str, mut mem
 }
 
 fn register_user(reddit_username: &str, mut member: &Member, conn: &MysqlConnection) -> Result<(), BotError> {
-
     let user = User {
         uid: 0,
         discord_id: member.user.id.to_string(),
