@@ -132,8 +132,17 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         }).await;
     } else {
         let mut id = msg.channel_id.to_channel(&ctx.http).await.unwrap().guild().unwrap().guild_id.member(&ctx.http, &msg.author.id).await.unwrap();
-        register_user(&*username, &id, &conn);
-        register_user_discord(&ctx, &*username, id).await;
+        let result2 = register_user(&*username, &id, &conn);
+        if result2.is_err() {
+            result2.err().unwrap().discord_message(&msg, "Unable to approve you", &ctx).await;
+            return Ok(());
+        }
+        let result2 = register_user_discord(&ctx, &*username, id).await;
+        if result2.is_err() {
+            result2.err().unwrap().discord_message(&msg, "You were approved however,we were unable to add a Discord role. Please have a mod add it for you.", &ctx).await;
+            return Ok(());
+
+        }
         msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.title("You have been registered");
