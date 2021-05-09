@@ -18,16 +18,11 @@ use serenity::{
     prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    fmt::Write,
-    sync::Arc,
-};
+
 
 use crate::{main, utils, Bot, DataHolder};
-use serenity::prelude::*;
-use tokio::sync::Mutex;
+
+
 
 #[group]
 #[commands(rcount)]

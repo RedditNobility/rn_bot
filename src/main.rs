@@ -33,7 +33,7 @@ use serenity::{
     prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::{
     collections::{HashMap, HashSet},
     env,
@@ -121,10 +121,10 @@ impl EventHandler for Handler {
         if msg.is_own(ctx.cache).await {
             return;
         }
-        let x = ctx.data.read().await;
+        let _x = ctx.data.read().await;
 
         if msg.content.clone().to_lowercase().contains("fuck zorthan") {
-            let msg = msg
+            let _msg = msg
                 .channel_id
                 .send_message(&ctx.http, |m| {
                     m.embed(|e| {
@@ -142,13 +142,13 @@ impl EventHandler for Handler {
                 .await;
         }
     }
-    async fn guild_member_addition(&self, status: Context, guild: GuildId, member: Member) {
+    async fn guild_member_addition(&self, status: Context, _guild: GuildId, member: Member) {
         println!("Test");
         let channel = ChannelId(830415533673414696);
         let file = lines_from_file(Path::new("resources").join("welcome-jokes"));
 
         let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
-        let msg = channel
+        let _msg = channel
             .send_message(&status.http, |m| {
                 m.embed(|e| {
                     e.title(format!("Welcome {}", member.user.name.clone()));
@@ -168,7 +168,7 @@ impl EventHandler for Handler {
     async fn guild_member_removal(
         &self,
         status: Context,
-        guild: GuildId,
+        _guild: GuildId,
         _new: User,
         _old_if_available: Option<Member>,
     ) {
@@ -176,7 +176,7 @@ impl EventHandler for Handler {
         let file = lines_from_file(Path::new("resources").join("exit-messages"));
 
         let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
-        let msg = channel
+        let _msg = channel
             .send_message(&status.http, |m| {
                 m.embed(|e| {
                     e.title(format!("Goodbye {}", _new.name.clone()));
@@ -254,34 +254,34 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
 
 // You can construct a hook without the use of a macro, too.
 // This requires some boilerplate though and the following additional import.
-use crate::utils::{refresh_reddit_count, refresh_server_count};
+use crate::utils::{refresh_server_count};
 use chrono::{DateTime, Duration, Local};
 use craftping::sync::ping;
 use craftping::{Error, Response};
-use diesel::r2d2::{ConnectionManager, PooledConnection};
+use diesel::r2d2::{ConnectionManager};
 use diesel::MysqlConnection;
-use new_rawr::auth::PasswordAuthenticator;
+
 use new_rawr::client::RedditClient;
-use serenity::builder::CreateEmbed;
-use serenity::cache::FromStrAndCache;
+
+
 use serenity::client::bridge::gateway::GatewayIntents;
-use serenity::http::routing::RouteInfo::CreateMessage;
-use serenity::http::AttachmentType;
-use serenity::model::channel::{Reaction, ReactionType};
+
+
+
 use serenity::model::gateway::Activity;
 use serenity::model::guild::Member;
-use serenity::model::guild::Target::Emoji;
-use serenity::model::id::{ChannelId, EmojiId, GuildId};
+
+use serenity::model::id::{ChannelId, GuildId};
 use serenity::model::prelude::User;
-use serenity::model::webhook::Webhook;
-use serenity::utils::MessageBuilder;
+
+
 use serenity::{futures::future::BoxFuture, FutureExt};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::ops::Sub;
 use std::path::Path;
-use std::thread::sleep;
-use std::time::Instant;
+
+
 
 fn _dispatch_error_no_macro<'fut>(
     ctx: &'fut mut Context,
@@ -370,7 +370,7 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
         .unwrap()
         .len()
         .to_string();
-    let msg = msg
+    let _msg = msg
         .channel_id
         .send_message(&ctx.http, |m| {
             m.reference_message(msg);
@@ -395,7 +395,7 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
 async fn botinfo(ctx: &Context, msg: &Message) -> CommandResult {
     let mut data = ctx.data.write().await;
     let x: &mut Bot = data.get_mut::<DataHolder>().unwrap();
-    let msg = msg
+    let _msg = msg
         .channel_id
         .send_message(&ctx.http, |m| {
             m.reference_message(msg);
@@ -452,7 +452,7 @@ fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
 #[command]
 #[sub_commands(vanilla, modded)]
 async fn minecraft(ctx: &Context, msg: &Message) -> CommandResult {
-    let msg = msg
+    let _msg = msg
         .channel_id
         .send_message(&ctx.http, |m| {
             m.reference_message(msg);
@@ -478,7 +478,7 @@ async fn minecraft(ctx: &Context, msg: &Message) -> CommandResult {
 #[description("Gets information about the Vanilla MC Server")]
 async fn vanilla(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let pong: Result<Response, Error> = ping("play.redditnobility.org", 25565);
-    let msg = msg.channel_id.send_message(&ctx.http, |m| {
+    let _msg = msg.channel_id.send_message(&ctx.http, |m| {
         m.reference_message(msg);
         m.embed(|e| {
             e.title("RedditNobility Minecraft Vanilla Server Info");
@@ -508,7 +508,7 @@ async fn vanilla(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 async fn modded(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let pong: Result<Response, Error> = ping("46.105.77.36", 25579);
 
-    let msg = msg
+    let _msg = msg
         .channel_id
         .send_message(&ctx.http, |m| {
             m.reference_message(msg);

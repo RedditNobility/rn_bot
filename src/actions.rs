@@ -2,7 +2,7 @@ use diesel::prelude::*;
 use diesel::MysqlConnection;
 
 use crate::models;
-use crate::models::{Event, User};
+use crate::models::{User};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn get_user_by_discord(

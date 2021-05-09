@@ -5,11 +5,11 @@ use crate::models::User;
 use crate::{actions, Bot, DataHolder, DbPool, DbPoolType};
 use diesel::prelude::*;
 use diesel::MysqlConnection;
-use hyper::client::{Client, HttpConnector};
+use hyper::client::{Client};
 use hyper::header::USER_AGENT;
 use hyper::http::request::Builder;
-use hyper::Uri;
-use hyper::{Body, Method, Request, StatusCode};
+
+use hyper::{Body, Method};
 use hyper_tls::HttpsConnector;
 use serde::{Deserialize, Serialize};
 use serenity::http::CacheHttp;
@@ -36,7 +36,7 @@ use serenity::{
     prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
-use std::sync::MutexGuard;
+
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{
     collections::{HashMap, HashSet},
@@ -44,7 +44,7 @@ use std::{
     fmt::Write,
     sync::Arc,
 };
-use tokio::sync::Mutex;
+
 
 #[group]
 #[commands(register)]
@@ -54,8 +54,8 @@ struct Register;
 #[aliases("login")]
 #[description("Gets you registered to the server")]
 async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let mut data = ctx.data.read().await;
-    let x: &Bot = data.get::<DataHolder>().unwrap();
+    let data = ctx.data.read().await;
+    let _x: &Bot = data.get::<DataHolder>().unwrap();
     let option = _args.current();
     let pool: &DbPoolType = data.get::<DbPool>().unwrap();
     let conn = pool.get();
@@ -160,7 +160,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             })
             .await;
     } else {
-        let mut id = msg
+        let id = msg
             .channel_id
             .to_channel(&ctx.http)
             .await
@@ -223,7 +223,7 @@ async fn register_user_discord(
 
 fn register_user(
     reddit_username: &str,
-    mut member: &Member,
+    member: &Member,
     conn: &MysqlConnection,
 ) -> Result<(), BotError> {
     let user = User {
@@ -245,7 +245,7 @@ fn register_user(
 async fn validate_user(p0: &str) -> Result<bool, BotError> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
-    let mut builder = (Builder::new())
+    let builder = (Builder::new())
         .header(USER_AGENT, "RedditNobilityBot")
         .method(Method::GET)
         .uri(format!("https://redditnobility.org/api/user/{}", p0));

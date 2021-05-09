@@ -18,17 +18,12 @@ use serenity::{
     prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    fmt::Write,
-    sync::Arc,
-};
+
 
 use crate::{Bot, DataHolder};
 use serenity::model::id::ChannelId;
-use serenity::prelude::*;
-use tokio::sync::Mutex;
+
+
 pub async fn refresh_server_count(status: &Context) {
     let channel = ChannelId(830636660197687316);
     let i = channel

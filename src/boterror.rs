@@ -6,7 +6,7 @@ use hyper::StatusCode;
 use serde_json;
 use serenity::client::Context;
 use serenity::model::channel::Message;
-use serenity::model::id::{ChannelId, MessageId};
+use serenity::model::id::{ChannelId};
 
 /// Error type that occurs when an API request fails for some reason.
 #[derive(Debug)]
@@ -31,7 +31,7 @@ pub enum BotError {
 
 impl BotError {
     pub async fn discord_message(&self, message: &Message, error: &str, context: &Context) {
-        let msg = message
+        let _msg = message
             .channel_id
             .send_message(&context.http, |m| {
                 m.reference_message(message);
