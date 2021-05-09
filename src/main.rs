@@ -156,6 +156,23 @@ impl EventHandler for Handler {
         refresh_server_count(&status).await;
     }
     async fn guild_member_removal(&self, status: Context, guild: GuildId, _new: User, _old_if_available: Option<Member>) {
+        let channel = ChannelId(840919470695645184);
+        let file = lines_from_file(Path::new("resources").join("exit-messages"));
+
+        let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
+        let msg = channel.send_message(&status.http, |m| {
+            m.embed(|e| {
+                e.title(format!("Goodbye {}", _new.name.clone()));
+                e.description(option.replace("{name}", &*_new.name.clone()));
+                e.footer(|f| {
+                    f.text("Robotic Monarch");
+                    f
+                });
+
+                e
+            });
+            m
+        }).await;
         refresh_server_count(&status).await;
     }
 }
