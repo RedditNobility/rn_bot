@@ -1,13 +1,12 @@
-use std::{collections::{HashMap, HashSet}, env, fmt::Write, sync::Arc};
 use serenity::{
-    prelude::*,
     async_trait,
     client::bridge::gateway::{ShardId, ShardManager},
     framework::standard::{
-        Args, CommandOptions, CommandResult, CommandGroup,
-        DispatchError, HelpOptions, help_commands, Reason, StandardFramework,
-        buckets::{RevertBucket, LimitedFor},
-        macros::{command, group, help, check, hook},
+        buckets::{LimitedFor, RevertBucket},
+        help_commands,
+        macros::{check, command, group, help, hook},
+        Args, CommandGroup, CommandOptions, CommandResult, DispatchError, HelpOptions, Reason,
+        StandardFramework,
     },
     http::Http,
     model::{
@@ -16,12 +15,19 @@ use serenity::{
         id::UserId,
         permissions::Permissions,
     },
+    prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
+use std::{
+    collections::{HashMap, HashSet},
+    env,
+    fmt::Write,
+    sync::Arc,
+};
 
+use crate::{main, utils, Bot, DataHolder};
 use serenity::prelude::*;
 use tokio::sync::Mutex;
-use crate::{Bot, DataHolder, main, utils};
 
 #[group]
 #[commands(rcount)]
@@ -34,5 +40,3 @@ async fn rcount(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     utils::refresh_server_count(ctx).await;
     Ok(())
 }
-
-

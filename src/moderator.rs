@@ -1,15 +1,14 @@
 // A command can have sub-commands, just like in command lines tools.
 // Imagine `cargo help` and `cargo help run`.
-use std::{collections::{HashMap, HashSet}, env, fmt::Write, sync::Arc};
 use serenity::{
-    prelude::*,
     async_trait,
     client::bridge::gateway::{ShardId, ShardManager},
     framework::standard::{
-        Args, CommandOptions, CommandResult, CommandGroup,
-        DispatchError, HelpOptions, help_commands, Reason, StandardFramework,
-        buckets::{RevertBucket, LimitedFor},
-        macros::{command, group, help, check, hook},
+        buckets::{LimitedFor, RevertBucket},
+        help_commands,
+        macros::{check, command, group, help, hook},
+        Args, CommandGroup, CommandOptions, CommandResult, DispatchError, HelpOptions, Reason,
+        StandardFramework,
     },
     http::Http,
     model::{
@@ -18,13 +17,19 @@ use serenity::{
         id::UserId,
         permissions::Permissions,
     },
+    prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
+use std::{
+    collections::{HashMap, HashSet},
+    env,
+    fmt::Write,
+    sync::Arc,
+};
 
+use crate::{Bot, DataHolder};
 use serenity::prelude::*;
 use tokio::sync::Mutex;
-use crate::{Bot, DataHolder};
-
 
 #[group]
 #[commands(event)]

@@ -4,9 +4,9 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use hyper;
 use hyper::StatusCode;
 use serde_json;
-use serenity::model::id::{ChannelId, MessageId};
-use serenity::model::channel::Message;
 use serenity::client::Context;
+use serenity::model::channel::Message;
+use serenity::model::id::{ChannelId, MessageId};
 
 /// Error type that occurs when an API request fails for some reason.
 #[derive(Debug)]
@@ -31,35 +31,40 @@ pub enum BotError {
 
 impl BotError {
     pub async fn discord_message(&self, message: &Message, error: &str, context: &Context) {
-        let msg = message.channel_id.send_message(&context.http, |m| {
-            m.reference_message(message);
-            m.embed(|e| {
-                e.title("An Error has occurred");
-                e.description(error.clone());
-                e.footer(|f| {
-                    f.text("Robotic Monarch");
-                    f
-                });
+        let msg = message
+            .channel_id
+            .send_message(&context.http, |m| {
+                m.reference_message(message);
+                m.embed(|e| {
+                    e.title("An Error has occurred");
+                    e.description(error.clone());
+                    e.footer(|f| {
+                        f.text("Robotic Monarch");
+                        f
+                    });
 
-                e
-            });
-            m
-        }).await;
+                    e
+                });
+                m
+            })
+            .await;
         let error_log = ChannelId(834210453265317900);
 
-        error_log.send_message(&context.http, |m| {
-            m.embed(|e| {
-                e.title("An Error has occurred");
-                e.description(self.to_string());
-                e.footer(|f| {
-                    f.text("Robotic Monarch");
-                    f
-                });
+        error_log
+            .send_message(&context.http, |m| {
+                m.embed(|e| {
+                    e.title("An Error has occurred");
+                    e.description(self.to_string());
+                    e.footer(|f| {
+                        f.text("Robotic Monarch");
+                        f
+                    });
 
-                e
-            });
-            m
-        }).await;
+                    e
+                });
+                m
+            })
+            .await;
     }
 }
 
@@ -79,9 +84,7 @@ impl Display for BotError {
                 f.write_str("Unable to parse Json\n");
                 f.write_str(j.to_string().as_str())
             }
-            BotError::Other(s) => {
-                f.write_str(s.clone().as_str())
-            }
+            BotError::Other(s) => f.write_str(s.clone().as_str()),
             BotError::DBError(error) => {
                 f.write_str("Unable to execute query.\n");
                 f.write_str(error.to_string().as_str())

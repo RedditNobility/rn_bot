@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
-use std::fmt::{Display, Formatter, Error};
+use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Error, Formatter};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewEvent {

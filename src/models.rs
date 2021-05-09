@@ -1,10 +1,10 @@
-use serde::{Serialize, Deserialize};
-use diesel::{Queryable};
-use crate::schema::*;
-use std::str::FromStr;
 use crate::event::NewEvent;
-use std::time::{UNIX_EPOCH, SystemTime};
+use crate::schema::*;
+use diesel::Queryable;
+use serde::{Deserialize, Serialize};
 use serenity::model::id::ChannelId;
+use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable)]
 pub struct User {
@@ -13,7 +13,6 @@ pub struct User {
     pub reddit_username: String,
     pub created: i64,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable)]
 pub struct Event {
@@ -37,7 +36,10 @@ impl Event {
             active: true,
             discord_channel: channel.0 as i64,
             end: None,
-            created: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
+            created: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as i64,
         }
     }
 }
