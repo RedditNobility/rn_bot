@@ -50,6 +50,7 @@ mod moderator;
 mod register;
 mod schema;
 mod utils;
+mod site;
 
 #[macro_use]
 extern crate diesel;
