@@ -21,6 +21,9 @@ hyper = "0.14.5"
 hyper-tls = "0.5.0"
 chrono = "0.4.19"
 hostname = "0.3.1"
+strum = { version = "0.20.0", features = ["derive"] }
+strum_macros = "0.20.1"
+derive_more = "0.99.13"
 [dependencies.serenity]
 features = ["framework", "standard_framework", "rustls_backend", "model", "client"]
 version = "0.10.6"

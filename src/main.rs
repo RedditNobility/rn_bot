@@ -50,6 +50,7 @@ mod moderator;
 mod register;
 mod schema;
 mod utils;
+mod site;
 
 #[macro_use]
 extern crate diesel;
@@ -76,13 +77,15 @@ impl DataHolder {
 pub struct Bot {
     pub start_time: DateTime<Local>,
     pub reddit: Option<RedditClient>,
+    pub site_client: SiteClient,
 }
 
 impl Bot {
-    fn new(client: Option<RedditClient>) -> Bot {
+    fn new(client: Option<RedditClient>, site_client: SiteClient) -> Bot {
         Bot {
             start_time: Local::now(),
             reddit: client,
+            site_client,
         }
     }
     fn set_client(&mut self, client: RedditClient) {
@@ -267,7 +270,6 @@ use new_rawr::client::RedditClient;
 use serenity::client::bridge::gateway::GatewayIntents;
 
 
-
 use serenity::model::gateway::Activity;
 use serenity::model::guild::Member;
 
@@ -280,7 +282,8 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::ops::Sub;
 use std::path::Path;
-
+use crate::site::site_client::SiteClient;
+use crate::site::Authenticator;
 
 
 fn _dispatch_error_no_macro<'fut>(
@@ -301,7 +304,7 @@ fn _dispatch_error_no_macro<'fut>(
             }
         };
     }
-    .boxed()
+        .boxed()
 }
 embed_migrations!();
 #[tokio::main]
@@ -341,8 +344,15 @@ async fn main() {
         .expect("Err creating client");
 
     {
+        let authenticator = Authenticator {
+            token: None,
+            username: std::env::var("SITE_USERNAME").unwrap(),
+            password: std::env::var("SITE_PASSWORD").unwrap(),
+            client_key: std::env::var("SITE_CLIENT_TOKEN").unwrap(),
+            client_id: std::env::var("SITE_CLIENT_ID").unwrap().parse().unwrap(),
+        };
         let mut data = client.data.write().await;
-        data.insert::<DataHolder>(Bot::new(None));
+        data.insert::<DataHolder>(Bot::new(None, SiteClient::new(authenticator).await));
         data.insert::<DbPool>(final_pool.clone());
     }
 
