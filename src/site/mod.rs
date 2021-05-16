@@ -48,12 +48,17 @@ impl Authenticator {
         }
         let result = result.unwrap();
         if result.status() != hyper::StatusCode::OK {
-            return Err(BotError::HTTPError(result.status()));
+            let value = hyper::body::to_bytes(result.into_body()).await;
+
+            let value = String::from_utf8(value.unwrap().to_vec());
+            println!("{}", value.unwrap());
+            return Err(BotError::HTTPError(hyper::StatusCode::BAD_REQUEST));
         } else {
             let value = hyper::body::to_bytes(result.into_body()).await;
 
             let value = String::from_utf8(value.unwrap().to_vec());
             let string = value.unwrap();
+            println!("{}", string.clone());
             let result1: Result<APIResponse::<AuthToken>, serde_json::Error> = serde_json::from_str(&string);
             if let Ok(response) = result1 {
                 if let Some(token) = response.data {
