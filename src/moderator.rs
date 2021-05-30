@@ -80,7 +80,9 @@ async fn mod_info(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
                 e.title(u.username);
                 e.field("Level", u.level.to_string(), true);
                 e.field("Status", u.status.to_string(), true);
-                e.field("Moderator", u.moderator, true);
+                if !u.moderator.is_empty(){
+                    e.field("Moderator", u.moderator, true);
+                }
                 e.field("Discoverer", u.discoverer.to_string(), true);
                 e.footer(|f| {
                     f.text("Robotic Monarch");
