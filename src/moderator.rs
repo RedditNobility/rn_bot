@@ -1,3 +1,5 @@
+use std::string::ToString;
+
 // A command can have sub-commands, just like in command lines tools.
 // Imagine `cargo help` and `cargo help run`.
 use serenity::{
@@ -20,7 +22,7 @@ use serenity::{
     prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
-use std::string::ToString;
+
 use crate::{actions, Bot, DataHolder, DbPool, DbPoolType, site};
 use crate::boterror::BotError;
 use crate::models::User;
@@ -85,6 +87,8 @@ async fn mod_info(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
             });
             m
         }).await;
+    } else {
+        msg.reply_ping(&ctx.http, "What!").await;
     }
 
     Ok(())
