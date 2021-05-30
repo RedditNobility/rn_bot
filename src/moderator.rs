@@ -41,7 +41,8 @@ async fn mod_info(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
     let pool: &DbPoolType = data.get::<DbPool>().unwrap();
     let conn = pool.get();
     if conn.is_err() {
-        //TODO handle
+        msg.reply_ping(&ctx.http, "BAD CONN").await;
+        return Ok(());
     }
     let conn = conn.unwrap();
     let mut user: Option<site::model::User> = None;
@@ -67,6 +68,9 @@ async fn mod_info(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
             return Ok(());
         }
         user = reddit_user;
+    }else{
+        msg.reply_ping(&ctx.http, "Please mention a user").await;
+
     }
 
     if let Some(u) = user {
