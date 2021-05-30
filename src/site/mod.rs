@@ -13,8 +13,8 @@ use crate::site::model::AuthToken;
 use std::option::Option::Some;
 
 pub mod site_client;
-mod api_response;
-mod model;
+pub mod api_response;
+pub mod model;
 
 
 pub struct Authenticator {
