@@ -28,5 +28,5 @@ derive_more = "0.99.13"
 features = ["framework", "standard_framework", "rustls_backend", "model", "client"]
 version = "0.10.6"
 [dependencies.tokio]
-version = "1.5.0"
+version = "1.6.1"
 features = ["macros", "rt-multi-thread"]
