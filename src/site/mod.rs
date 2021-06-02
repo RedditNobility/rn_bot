@@ -2,7 +2,6 @@ use hyper::{Client, Method, Request, Body};
 use hyper_tls::HttpsConnector;
 use hyper::client::HttpConnector;
 use crate::boterror::BotError;
-use new_rawr::responses::auth::TokenResponseData;
 use hyper::header::{AUTHORIZATION, CONTENT_TYPE, USER_AGENT, HeaderName};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::collections::HashMap;
