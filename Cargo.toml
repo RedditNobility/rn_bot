@@ -26,7 +26,7 @@ strum_macros = "0.21.0"
 derive_more = "0.99.13"
 [dependencies.serenity]
 features = ["framework", "standard_framework", "rustls_backend", "model", "client"]
-version = "0.10.6"
+version = "0.10.7"
 [dependencies.tokio]
 version = "1.6.1"
 features = ["macros", "rt-multi-thread"]
