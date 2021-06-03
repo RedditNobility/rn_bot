@@ -34,6 +34,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{self};
 use diesel::r2d2::ConnectionManager;
 use hyper::StatusCode;
+use num_format::{Locale, ToFormattedString};
 use rand::seq::SliceRandom;
 use regex::Regex;
 use rraw::auth::{AnonymousAuthenticator, PasswordAuthenticator};
@@ -69,7 +70,7 @@ use serenity::model::id::{ChannelId, GuildId};
 use serenity::model::prelude::User;
 use serenity::prelude::*;
 use tokio::time::sleep;
-use num_format::{Locale, ToFormattedString};
+
 use crate::site::Authenticator;
 use crate::site::site_client::SiteClient;
 // You can construct a hook without the use of a macro, too.
@@ -197,7 +198,25 @@ impl EventHandler for Handler {
         if msg.channel_id.to_string().eq("829825560930156615") {
             return;
         }
+        if msg.content.contains("/s") || msg.content.contains("/j") {
+            let file = lines_from_file(Path::new("resources").join("joke-gifs"));
+            let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
 
+            let _msg = msg
+                .channel_id
+                .send_message(&ctx.http, |m| {
+                    m.reference_message(&msg);
+
+                    m.embed(|e| {
+                        e.title("IT IS A JOKE");
+                        e.image(option);
+
+                        e
+                    });
+                    m
+                })
+                .await;
+        }
         if msg.author.id.to_string().eq("411465364103495680") {
             if msg.content.contains("*") {
                 msg.react(&ctx.http, '🙄').await;
