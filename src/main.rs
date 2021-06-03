@@ -205,7 +205,7 @@ impl EventHandler for Handler {
             let _msg = msg
                 .channel_id
                 .send_message(&ctx.http, |m| {
-                    m.reference_message(&msg);
+                    m.reference_message(    &msg);
 
                     m.embed(|e| {
                         e.title("IT IS A JOKE");
