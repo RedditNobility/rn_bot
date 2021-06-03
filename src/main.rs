@@ -9,18 +9,46 @@
 //! features = ["framework", "standard_framework"]
 //! ```
 
+#[macro_use]
+extern crate diesel;
+#[macro_use]
+extern crate diesel_migrations;
+
+use std::{
+    collections::{HashMap, HashSet},
+    env,
+    fmt::Write,
+    thread,
+};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::ops::Sub;
+use std::path::Path;
+use std::sync::Arc;
+
+use chrono::{DateTime, Duration, Local};
+use craftping::{Error, Response};
+use craftping::sync::ping;
+use diesel::MysqlConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{self};
+use diesel::r2d2::ConnectionManager;
+use hyper::StatusCode;
 use rand::seq::SliceRandom;
-use serenity::prelude::*;
+use regex::Regex;
+use rraw::auth::{AnonymousAuthenticator, PasswordAuthenticator};
+use rraw::me::Me;
+use rraw::responses::GenericResponse;
+use rraw::responses::subreddit::AboutSubreddit;
+use rraw::utils::error::APIError;
 use serenity::{
     async_trait,
     client::bridge::gateway::{ShardId, ShardManager},
     framework::standard::{
+        Args,
         buckets::{LimitedFor, RevertBucket},
-        help_commands,
-        macros::{check, command, group, help, hook},
-        Args, CommandGroup, CommandOptions, CommandResult, DispatchError, HelpOptions, Reason,
+        CommandGroup,
+        CommandOptions, CommandResult, DispatchError, help_commands, HelpOptions, macros::{check, command, group, help, hook}, Reason,
         StandardFramework,
     },
     http::Http,
@@ -33,13 +61,20 @@ use serenity::{
     prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
-use std::sync::{Arc};
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    fmt::Write,
-    thread,
-};
+use serenity::{FutureExt, futures::future::BoxFuture};
+use serenity::client::bridge::gateway::GatewayIntents;
+use serenity::model::gateway::Activity;
+use serenity::model::guild::Member;
+use serenity::model::id::{ChannelId, GuildId};
+use serenity::model::prelude::User;
+use serenity::prelude::*;
+use tokio::time::sleep;
+use num_format::{Locale, ToFormattedString};
+use crate::site::Authenticator;
+use crate::site::site_client::SiteClient;
+// You can construct a hook without the use of a macro, too.
+// This requires some boilerplate though and the following additional import.
+use crate::utils::{refresh_reddit_count, refresh_server_count};
 
 mod actions;
 mod admin;
@@ -50,11 +85,7 @@ mod moderator;
 mod register;
 mod schema;
 mod utils;
-
-#[macro_use]
-extern crate diesel;
-#[macro_use]
-extern crate diesel_migrations;
+pub mod site;
 
 type DbPoolType = Arc<r2d2::Pool<ConnectionManager<MysqlConnection>>>;
 
@@ -75,19 +106,18 @@ impl DataHolder {
 
 pub struct Bot {
     pub start_time: DateTime<Local>,
-    pub reddit: Option<RedditClient>,
+    pub site_client: SiteClient,
 }
 
 impl Bot {
-    fn new(client: Option<RedditClient>) -> Bot {
+    fn new(site_client: SiteClient) -> Bot {
         Bot {
             start_time: Local::now(),
-            reddit: client,
+            site_client,
         }
     }
-    fn set_client(&mut self, client: RedditClient) {
-        self.reddit = Some(client)
-    }
+
+
     fn test(&mut self) {
         println!("test");
     }
@@ -103,45 +133,6 @@ struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, status: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
-        status.online().await;
-        status.set_activity(Activity::playing("A coup!")).await;
-    }
-    async fn message(&self, ctx: Context, msg: Message) {
-        if msg.channel_id.to_string().eq("829825560930156615") {
-            return;
-        }
-
-        if msg.author.id.to_string().eq("411465364103495680") {
-            if msg.content.contains("*") {
-                msg.react(&ctx.http, '🙄').await;
-            }
-        }
-        if msg.is_own(ctx.cache).await {
-            return;
-        }
-        let _x = ctx.data.read().await;
-
-        if msg.content.clone().to_lowercase().contains("fuck zorthan") {
-            let _msg = msg
-                .channel_id
-                .send_message(&ctx.http, |m| {
-                    m.embed(|e| {
-                        e.title("No Fucking Zorthan");
-                        e.description("Zorthan does not deserve anything. Let him go!");
-                        e.footer(|f| {
-                            f.text("Robotic Monarch");
-                            f
-                        });
-
-                        e
-                    });
-                    m
-                })
-                .await;
-        }
-    }
     async fn guild_member_addition(&self, status: Context, _guild: GuildId, member: Member) {
         println!("Test");
         let channel = ChannelId(830415533673414696);
@@ -192,6 +183,123 @@ impl EventHandler for Handler {
             })
             .await;
         refresh_server_count(&status).await;
+    }
+    async fn message(&self, ctx: Context, msg: Message) {
+        let re = Regex::new("r/[A-Za-z0-9_-]+").unwrap();
+        let option = re.find_iter(msg.content.as_str());
+        for x in option {
+
+            let text = x.as_str().replace("r/", "");
+            let me = Me::login(AnonymousAuthenticator::new(), "Reddit Nobility Bot u/KingTuxWH".to_string()).await.unwrap();
+            let subreddit = me.subreddit(text.clone());
+            match subreddit.about().await {
+                Ok(sub) => {
+                    let _msg = msg
+                        .channel_id
+                        .send_message(&ctx.http, |m| {
+                            m.reference_message(&msg);
+                            m.embed(|e| {
+                                let subreddit1 = sub.data;
+                                e.url(format!("https://reddit.com{}", subreddit1.url.unwrap()));
+                                e.title(subreddit1.display_name.unwrap());
+                                e.field("Members", subreddit1.subscribers.unwrap().to_formatted_string(&Locale::en), true);
+                                e.field("Description", subreddit1.public_description.unwrap_or("Missing Description ".to_string()), false);
+                                e.footer(|f| {
+                                    f.text("Robotic Monarch");
+                                    f
+                                });
+
+                                e
+                            });
+                            m
+                        })
+                        .await;
+                }
+                Err(err) => {
+                    match err {
+                        APIError::ExhaustedListing => {}
+                        APIError::HTTPError(http) => {
+                            if http == StatusCode::FORBIDDEN{
+                                let _msg = msg
+                                    .channel_id
+                                    .send_message(&ctx.http, |m| {
+                                        m.reference_message(&msg);
+                                        m.embed(|e| {
+                                            e.url(format!("https://reddit.com/r/{}", text.clone()));
+                                            e.title(text.clone());
+                                            e.field("Description", "Hidden Sub", false);
+                                            e.footer(|f| {
+                                                f.text("Robotic Monarch");
+                                                f
+                                            });
+
+                                            e
+                                        });
+                                        m
+                                    })
+                                    .await;
+                            }
+                        }
+                        APIError::ReqwestError(_) => {}
+                        APIError::JSONError(_) => {}
+                        APIError::ExpiredToken => {}
+                        APIError::Custom(_) => {}
+                    }
+                }
+            };
+        }
+
+        let x = msg.content.contains("");
+        if msg.channel_id.to_string().eq("829825560930156615") {
+            return;
+        }
+
+        if msg.author.id.to_string().eq("411465364103495680") {
+            if msg.content.contains("*") {
+                msg.react(&ctx.http, '🙄').await;
+            }
+        }
+        if msg.is_own(ctx.cache).await {
+            return;
+        }
+        let _x = ctx.data.read().await;
+
+        if msg.content.clone().to_lowercase().contains("fuck zorthan") {
+            let _msg = msg
+                .channel_id
+                .send_message(&ctx.http, |m| {
+                    m.embed(|e| {
+                        e.title("No Fucking Zorthan");
+                        e.description("Zorthan does not deserve anything. Let him go!");
+                        e.footer(|f| {
+                            f.text("Robotic Monarch");
+                            f
+                        });
+
+                        e
+                    });
+                    m
+                })
+                .await;
+        }
+    }
+    async fn ready(&self, status: Context, ready: Ready) {
+        println!("{} is connected!", ready.user.name);
+        status.online().await;
+        status.set_activity(Activity::playing("A coup!")).await;
+
+        tokio::spawn(async move {
+            let arc = PasswordAuthenticator::new(
+                std::env::var("CLIENT_KEY").unwrap().as_str(),
+                std::env::var("CLIENT_SECRET").unwrap().as_str(),
+                std::env::var("REDDIT_USER").unwrap().as_str(),
+                std::env::var("PASSWORD").unwrap().as_str());
+            let reddit = Me::login(arc, "RedditNobility Discord bot(by u/KingTuxWH)".to_string()).await.unwrap();
+            loop {
+                refresh_reddit_count(status.clone(), &reddit).await;
+                sleep(Duration::minutes(15).to_std().unwrap()).await;
+            }
+        }).await;
     }
 }
 
@@ -252,37 +360,6 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     }
 }
 
-// You can construct a hook without the use of a macro, too.
-// This requires some boilerplate though and the following additional import.
-use crate::utils::{refresh_server_count};
-use chrono::{DateTime, Duration, Local};
-use craftping::sync::ping;
-use craftping::{Error, Response};
-use diesel::r2d2::{ConnectionManager};
-use diesel::MysqlConnection;
-
-use new_rawr::client::RedditClient;
-
-
-use serenity::client::bridge::gateway::GatewayIntents;
-
-
-
-use serenity::model::gateway::Activity;
-use serenity::model::guild::Member;
-
-use serenity::model::id::{ChannelId, GuildId};
-use serenity::model::prelude::User;
-
-
-use serenity::{futures::future::BoxFuture, FutureExt};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::ops::Sub;
-use std::path::Path;
-
-
-
 fn _dispatch_error_no_macro<'fut>(
     ctx: &'fut mut Context,
     msg: &'fut Message,
@@ -301,7 +378,7 @@ fn _dispatch_error_no_macro<'fut>(
             }
         };
     }
-    .boxed()
+        .boxed()
 }
 embed_migrations!();
 #[tokio::main]
@@ -341,8 +418,17 @@ async fn main() {
         .expect("Err creating client");
 
     {
+        let authenticator = Authenticator {
+            token: None,
+            username: std::env::var("SITE_USERNAME").unwrap(),
+            password: std::env::var("SITE_PASSWORD").unwrap(),
+            client_key: std::env::var("SITE_CLIENT_TOKEN").unwrap(),
+            client_id: std::env::var("SITE_CLIENT_ID").unwrap().parse().unwrap(),
+        };
+
+
         let mut data = client.data.write().await;
-        data.insert::<DataHolder>(Bot::new(None));
+        data.insert::<DataHolder>(Bot::new(SiteClient::new(authenticator).await));
         data.insert::<DbPool>(final_pool.clone());
     }
 

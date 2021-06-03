@@ -44,6 +44,7 @@ use std::{
     fmt::Write,
     sync::Arc,
 };
+use crate::site::site_client::SiteClient;
 
 
 #[group]
@@ -110,7 +111,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         return Ok(());
     }
     let username = option.unwrap().replace("u/", "");
-    let user = validate_user(&*username).await;
+    let user = validate_user(&*username, &_x.site_client).await;
     let result1 = is_registered_reddit(username.clone(), &conn);
     if result1.is_err() {
         //    pub async fn discord_message(&self, message: &Message, error: &str, context: &Context) {
@@ -242,33 +243,14 @@ fn register_user(
     return Ok(());
 }
 
-async fn validate_user(p0: &str) -> Result<bool, BotError> {
-    let https = HttpsConnector::new();
-    let client = Client::builder().build::<_, hyper::Body>(https);
-    let builder = (Builder::new())
-        .header(USER_AGENT, "RedditNobilityBot")
-        .method(Method::GET)
-        .uri(format!("https://redditnobility.org/api/user/{}", p0));
-    let result1 = builder.body(Body::empty());
-    if result1.is_err() {
-        return Err(BotError::HyperHTTPError(result1.err().unwrap()));
+async fn validate_user(p0: &str, site_client: &SiteClient) -> Result<bool, BotError> {
+    let x = site_client.get_user(p0.parse().unwrap()).await;
+    if let Err(error) = x {
+        return Err(error);
+    } else if let Ok(ok) = x {
+        return Ok(ok.is_some());
     }
-    let request = result1.unwrap();
-    let result = client.request(request).await;
-    if result.is_err() {
-        return Err(BotError::HyperError(result.err().unwrap()));
-    }
-    let response = result.unwrap();
-    if response.status().is_success() {
-        let bytes = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let string = String::from_utf8(bytes.to_vec()).unwrap();
-        let user: WebsiteUser = serde_json::from_str(&*string).unwrap();
-        return Ok(user.status == "Approved");
-    } else if response.status().as_u16() == 404 {
-        return Ok(false);
-    } else {
-        return Err(BotError::HTTPError(response.status().clone()));
-    }
+    return Ok(false);
 }
 
 fn is_registered(p0: UserId, connect: &MysqlConnection) -> Result<bool, BotError> {
