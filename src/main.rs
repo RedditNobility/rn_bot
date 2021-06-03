@@ -74,7 +74,7 @@ use crate::site::Authenticator;
 use crate::site::site_client::SiteClient;
 // You can construct a hook without the use of a macro, too.
 // This requires some boilerplate though and the following additional import.
-use crate::utils::{refresh_reddit_count, refresh_server_count};
+use crate::utils::{refresh_reddit_count, refresh_server_count, subreddit_info, user_info};
 
 mod actions;
 mod admin;
@@ -187,68 +187,12 @@ impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         let re = Regex::new("r/[A-Za-z0-9_-]+").unwrap();
         let option = re.find_iter(msg.content.as_str());
-        for x in option {
+        subreddit_info(ctx.clone(), option, &msg).await;
 
-            let text = x.as_str().replace("r/", "");
-            let me = Me::login(AnonymousAuthenticator::new(), "Reddit Nobility Bot u/KingTuxWH".to_string()).await.unwrap();
-            let subreddit = me.subreddit(text.clone());
-            match subreddit.about().await {
-                Ok(sub) => {
-                    let _msg = msg
-                        .channel_id
-                        .send_message(&ctx.http, |m| {
-                            m.reference_message(&msg);
-                            m.embed(|e| {
-                                let subreddit1 = sub.data;
-                                e.url(format!("https://reddit.com{}", subreddit1.url.unwrap()));
-                                e.title(subreddit1.display_name.unwrap());
-                                e.field("Members", subreddit1.subscribers.unwrap().to_formatted_string(&Locale::en), true);
-                                e.field("Description", subreddit1.public_description.unwrap_or("Missing Description ".to_string()), false);
-                                e.footer(|f| {
-                                    f.text("Robotic Monarch");
-                                    f
-                                });
 
-                                e
-                            });
-                            m
-                        })
-                        .await;
-                }
-                Err(err) => {
-                    match err {
-                        APIError::ExhaustedListing => {}
-                        APIError::HTTPError(http) => {
-                            if http == StatusCode::FORBIDDEN{
-                                let _msg = msg
-                                    .channel_id
-                                    .send_message(&ctx.http, |m| {
-                                        m.reference_message(&msg);
-                                        m.embed(|e| {
-                                            e.url(format!("https://reddit.com/r/{}", text.clone()));
-                                            e.title(text.clone());
-                                            e.field("Description", "Hidden Sub", false);
-                                            e.footer(|f| {
-                                                f.text("Robotic Monarch");
-                                                f
-                                            });
-
-                                            e
-                                        });
-                                        m
-                                    })
-                                    .await;
-                            }
-                        }
-                        APIError::ReqwestError(_) => {}
-                        APIError::JSONError(_) => {}
-                        APIError::ExpiredToken => {}
-                        APIError::Custom(_) => {}
-                    }
-                }
-            };
-        }
-
+        let user_re = Regex::new("u/[A-Za-z0-9_-]+").unwrap();
+        let option = user_re.find_iter(msg.content.as_str());
+        user_info(ctx.clone(), option, &msg).await;
         let x = msg.content.contains("");
         if msg.channel_id.to_string().eq("829825560930156615") {
             return;
