@@ -346,6 +346,11 @@ fn _dispatch_error_no_macro<'fut>(
 embed_migrations!();
 #[tokio::main]
 async fn main() {
+    let file_appender = tracing_appender::rolling::hourly("log/discord", "discord.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    tracing_subscriber::fmt()
+        .with_writer(non_blocking)
+        .init();
     dotenv::dotenv().ok();
     let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL");
     let manager = ConnectionManager::<MysqlConnection>::new(connspec);

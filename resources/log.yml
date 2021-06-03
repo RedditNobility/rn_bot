@@ -1,0 +1,25 @@
+appenders:
+  stdout:
+    kind: console
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} [{l}][{M}]: {m}\n"
+  bot:
+    kind: file
+    path: "log/bot.log"
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} [{l}][{M}]: {m}\n"
+  all:
+    kind: file
+    path: "log/all.log"
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} [{l}][{M}]: {m}\n"
+root:
+  level: info
+  appenders:
+    - stdout
+    - all
+loggers:
+  RedditNoblityBot:
+    level: trace
+    appenders:
+      - bot

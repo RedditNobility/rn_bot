@@ -132,7 +132,7 @@ pub async fn user_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
                             e.field("Total Karma", user.total_karma.to_formatted_string(&Locale::en), true);
                             e.field("Comment Karma", user.comment_karma.to_formatted_string(&Locale::en), true);
                             e.field("Link Karma", user.link_karma.to_formatted_string(&Locale::en), true);
-                            e.title(user.name);
+                             e.title(user.name);
                             if let Some(img) = user.snoovatar_img {
                                 if !img.is_empty() {
                                     e.image(img);
