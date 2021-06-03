@@ -254,7 +254,7 @@ impl EventHandler for Handler {
             return;
         }
 
-        if msg.author.id.to_string().eqReddit("411465364103495680") {
+        if msg.author.id.to_string().eq("411465364103495680") {
             if msg.content.contains("*") {
                 msg.react(&ctx.http, '🙄').await;
             }
