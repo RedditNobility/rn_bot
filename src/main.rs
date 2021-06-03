@@ -33,9 +33,14 @@ use diesel::MysqlConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{self};
 use diesel::r2d2::ConnectionManager;
+use hyper::StatusCode;
 use rand::seq::SliceRandom;
-use rraw::auth::PasswordAuthenticator;
+use regex::Regex;
+use rraw::auth::{AnonymousAuthenticator, PasswordAuthenticator};
 use rraw::me::Me;
+use rraw::responses::GenericResponse;
+use rraw::responses::subreddit::AboutSubreddit;
+use rraw::utils::error::APIError;
 use serenity::{
     async_trait,
     client::bridge::gateway::{ShardId, ShardManager},
@@ -64,7 +69,7 @@ use serenity::model::id::{ChannelId, GuildId};
 use serenity::model::prelude::User;
 use serenity::prelude::*;
 use tokio::time::sleep;
-
+use num_format::{Locale, ToFormattedString};
 use crate::site::Authenticator;
 use crate::site::site_client::SiteClient;
 // You can construct a hook without the use of a macro, too.
@@ -180,11 +185,76 @@ impl EventHandler for Handler {
         refresh_server_count(&status).await;
     }
     async fn message(&self, ctx: Context, msg: Message) {
+        let re = Regex::new("r/[A-Za-z0-9_-]+").unwrap();
+        let option = re.find_iter(msg.content.as_str());
+        for x in option {
+
+            let text = x.as_str().replace("r/", "");
+            let me = Me::login(AnonymousAuthenticator::new(), "Reddit Nobility Bot u/KingTuxWH".to_string()).await.unwrap();
+            let subreddit = me.subreddit(text.clone());
+            match subreddit.about().await {
+                Ok(sub) => {
+                    let _msg = msg
+                        .channel_id
+                        .send_message(&ctx.http, |m| {
+                            m.reference_message(&msg);
+                            m.embed(|e| {
+                                let subreddit1 = sub.data;
+                                e.url(format!("https://reddit.com{}", subreddit1.url.unwrap()));
+                                e.title(subreddit1.display_name.unwrap());
+                                e.field("Members", subreddit1.subscribers.unwrap().to_formatted_string(&Locale::en), true);
+                                e.field("Description", subreddit1.public_description.unwrap_or("Missing Description ".to_string()), false);
+                                e.footer(|f| {
+                                    f.text("Robotic Monarch");
+                                    f
+                                });
+
+                                e
+                            });
+                            m
+                        })
+                        .await;
+                }
+                Err(err) => {
+                    match err {
+                        APIError::ExhaustedListing => {}
+                        APIError::HTTPError(http) => {
+                            if http == StatusCode::FORBIDDEN{
+                                let _msg = msg
+                                    .channel_id
+                                    .send_message(&ctx.http, |m| {
+                                        m.reference_message(&msg);
+                                        m.embed(|e| {
+                                            e.url(format!("https://reddit.com/r/{}", text.clone()));
+                                            e.title(text.clone());
+                                            e.field("Description", "Hidden Sub", false);
+                                            e.footer(|f| {
+                                                f.text("Robotic Monarch");
+                                                f
+                                            });
+
+                                            e
+                                        });
+                                        m
+                                    })
+                                    .await;
+                            }
+                        }
+                        APIError::ReqwestError(_) => {}
+                        APIError::JSONError(_) => {}
+                        APIError::ExpiredToken => {}
+                        APIError::Custom(_) => {}
+                    }
+                }
+            };
+        }
+
+        let x = msg.content.contains("");
         if msg.channel_id.to_string().eq("829825560930156615") {
             return;
         }
 
-        if msg.author.id.to_string().eq("411465364103495680") {
+        if msg.author.id.to_string().eqReddit("411465364103495680") {
             if msg.content.contains("*") {
                 msg.react(&ctx.http, '🙄').await;
             }
@@ -224,7 +294,7 @@ impl EventHandler for Handler {
                 std::env::var("CLIENT_SECRET").unwrap().as_str(),
                 std::env::var("REDDIT_USER").unwrap().as_str(),
                 std::env::var("PASSWORD").unwrap().as_str());
-            let reddit =Me::login(arc, "RedditNobility Discord bot(by u/KingTuxWH)".to_string()).await.unwrap();
+            let reddit = Me::login(arc, "RedditNobility Discord bot(by u/KingTuxWH)".to_string()).await.unwrap();
             loop {
                 refresh_reddit_count(status.clone(), &reddit).await;
                 sleep(Duration::minutes(15).to_std().unwrap()).await;
