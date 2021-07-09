@@ -198,7 +198,8 @@ impl EventHandler for Handler {
         if msg.channel_id.to_string().eq("829825560930156615") {
             return;
         }
-        if msg.content.contains("/s") || msg.content.contains("/j") {
+        if (msg.content.contains("/s") || msg.content.contains("/j")) && !msg.content.contains("http") {
+
             let file = lines_from_file(Path::new("resources").join("joke-gifs"));
             let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
 
