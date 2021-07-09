@@ -1767,8 +1767,8 @@ dependencies = [
 
 [[package]]
 name = "rraw"
-version = "0.0.1"
-source = "git+https://github.com/wherkamp/rraw.git#c09997376743fed98eabd665489d7edc81ec7d23"
+version = "0.0.2"
+source = "git+https://github.com/wherkamp/rraw.git#401ec4afc111eca7988d59f5c6a6ab190186363a"
 dependencies = [
  "async-trait",
  "base64 0.13.0",
