@@ -27,14 +27,20 @@ use crate::{actions, Bot, DataHolder, DbPool, DbPoolType, site};
 use crate::boterror::BotError;
 use crate::models::User;
 use crate::schema::events::columns::active;
+use serenity::model::gateway::Activity;
 
 #[group]
-#[commands(event, mod_info)]
+#[commands(event, mod_info, set_status)]
 #[allowed_roles("Moderator")]
 struct Mod;
-
+#[command("setStatus")]
+async fn set_status(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let x = args.message();
+    ctx.online().await;
+    ctx.set_activity(Activity::playing(x)).await;
+    return Ok(())
+}
 #[command("mod-info")]
-#[sub_commands(create)]
 async fn mod_info(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.read().await;
     let bot: &Bot = data.get::<DataHolder>().unwrap();
