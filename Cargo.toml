@@ -34,5 +34,5 @@ tracing-subscriber = "0.2.19"
 features = ["framework", "standard_framework", "rustls_backend", "model", "client"]
 version = "0.10.8"
 [dependencies.tokio]
-version = "1.8.1"
+version = "1.10.0"
 features = ["macros", "rt-multi-thread"]
