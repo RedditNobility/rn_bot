@@ -29,7 +29,7 @@ num-format = "0.4.0"
 log4rs = "1.0.0"
 log = "0.4.14"
 tracing-appender = "0.1"
-tracing-subscriber = "0.2.19"
+tracing-subscriber = "0.2.23"
 [dependencies.serenity]
 features = ["framework", "standard_framework", "rustls_backend", "model", "client"]
 version = "0.10.8"
