@@ -77,22 +77,45 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             .await;
         return Ok(());
     }
-    if result.unwrap() {
-        msg.channel_id
-            .send_message(&ctx.http, |m| {
-                m.embed(|e| {
-                    e.title("You are already registered");
-                    e.footer(|f| {
-                        f.text("Robotic Monarch");
-                        f
-                    });
-                    e
-                });
-                m
-            })
-            .await;
-        return Ok(());
+    if let Ok(value) = result {
+        if let Some(user) = value {
+            if msg.author.has_role(&ctx.http, msg.guild_id.unwrap(), RoleId(830277916944236584)).await? {
+                msg.channel_id
+                    .send_message(&ctx.http, |m| {
+                        m.embed(|e| {
+                            e.title("You are already registered");
+                            e.footer(|f| {
+                                f.text("Robotic Monarch");
+                                f
+                            });
+                            e
+                        });
+                        m
+                    })
+                    .await;
+                return Ok(());
+            } else {
+                msg.channel_id
+                    .send_message(&ctx.http, |m| {
+                        m.embed(|e| {
+                            e.title("You are already registered! Adding role!");
+                            e.footer(|f| {
+                                f.text("Robotic Monarch");
+                                f
+                            });
+                            e
+                        });
+                        m
+                    })
+                    .await;
+
+                register_user_discord(&ctx, user.reddit_username.as_str(), msg.member(&ctx.http).await.unwrap()).await;
+
+                return Ok(());
+            }
+        }
     }
+
 
     if option.is_none() {
         msg.channel_id
@@ -253,21 +276,22 @@ async fn validate_user(p0: &str, site_client: &SiteClient) -> Result<bool, BotEr
     return Ok(false);
 }
 
-fn is_registered(p0: UserId, connect: &MysqlConnection) -> Result<bool, BotError> {
+fn is_registered(p0: UserId, connect: &MysqlConnection) -> Result<Option<User>, BotError> {
     let x = actions::get_user_by_discord(p0.0.to_string(), connect);
     if x.is_err() {
         return Err(BotError::DBError(x.err().unwrap()));
     }
     let result = x.unwrap();
-    return Ok(result.is_some());
+    return Ok(result);
 }
 
-fn is_registered_reddit(p0: String, connect: &MysqlConnection) -> Result<bool, BotError> {
-    let x = actions::get_user_by_reddit(p0, connect);
+fn is_registered_reddit(reddit_username: String, connect: &MysqlConnection) -> Result<bool, BotError> {
+    let x = actions::get_user_by_reddit(reddit_username, connect);
     if x.is_err() {
         return Err(BotError::DBError(x.err().unwrap()));
     }
     let result = x.unwrap();
+
     return Ok(result.is_some());
 }
 

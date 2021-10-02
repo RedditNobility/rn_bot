@@ -16,6 +16,7 @@ pub fn get_user_by_discord(
         .first::<models::User>(conn)
         .optional()?;
 
+
     Ok(found)
 }
 
