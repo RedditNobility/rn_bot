@@ -13,7 +13,7 @@ r2d2 = "0.8.9"
 r2d2_mysql = "*"
 dotenv = "0.15.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.64"
+serde_json = "1.0.70"
 rraw = { git = "https://github.com/wherkamp/rraw.git"}
 rand = { git = "https://github.com/rust-random/rand" }
 craftping = "0.2.1"
