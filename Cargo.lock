@@ -25,7 +25,7 @@ dependencies = [
  "serde_json",
  "serenity",
  "strum",
- "strum_macros",
+ "strum_macros 0.21.1",
  "tokio",
  "tracing-appender",
  "tracing-subscriber",
@@ -1768,10 +1768,11 @@ dependencies = [
 [[package]]
 name = "rraw"
 version = "0.0.2"
-source = "git+https://github.com/wherkamp/rraw.git#401ec4afc111eca7988d59f5c6a6ab190186363a"
+source = "git+https://github.com/wherkamp/rraw.git#ba693e49635a500f15745ba91e3952cb1fd6dc2d"
 dependencies = [
  "async-trait",
  "base64 0.13.0",
+ "log",
  "reqwest",
  "serde",
  "serde_json",
@@ -1825,6 +1826,12 @@ dependencies = [
  "sct",
  "webpki",
 ]
+
+[[package]]
+name = "rustversion"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61b3909d758bb75c79f23d4736fac9433868679d3ad2ea7a61e3c25cfda9a088"
 
 [[package]]
 name = "ryu"
@@ -1955,9 +1962,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.64"
+version = "1.0.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
+checksum = "d0ffa0837f2dfa6fb90868c2b5468cad482e175f7dad97e7421951e663f2b527"
 dependencies = [
  "itoa",
  "ryu",
@@ -2106,11 +2113,11 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "strum"
-version = "0.21.0"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aaf86bbcfd1fa9670b7a129f64fc0c9fcbbfe4f1bc4210e9e98fe71ffc12cde2"
+checksum = "cae14b91c7d11c9a851d3fbc80a963198998c2a64eec840477fa92d8ce9b70bb"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.23.0",
 ]
 
 [[package]]
@@ -2122,6 +2129,19 @@ dependencies = [
  "heck",
  "proc-macro2",
  "quote",
+ "syn",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00ad150e9d51e33e8142984f577662c1324d49f3be45ed37bac8645fdcbe0fe5"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "rustversion",
  "syn",
 ]
 
