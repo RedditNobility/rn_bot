@@ -32,7 +32,7 @@ tracing-appender = "0.1"
 tracing-subscriber = "0.2.19"
 [dependencies.serenity]
 features = ["framework", "standard_framework", "rustls_backend", "model", "client"]
-version = "0.10.8"
+version = "0.10.9"
 [dependencies.tokio]
 version = "1.8.1"
 features = ["macros", "rt-multi-thread"]
