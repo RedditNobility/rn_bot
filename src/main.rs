@@ -14,12 +14,7 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    fmt::Write,
-    thread,
-};
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::ops::Sub;
@@ -27,55 +22,47 @@ use std::path::Path;
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Local};
-use craftping::{Error, Response};
 use craftping::sync::ping;
-use diesel::MysqlConnection;
+use craftping::{Error, Response};
 use diesel::prelude::*;
-use diesel::r2d2::{self};
 use diesel::r2d2::ConnectionManager;
-use hyper::StatusCode;
-use num_format::{Locale, ToFormattedString};
+use diesel::r2d2::{self};
+use diesel::MysqlConnection;
+
+use nitro_log::config::Config;
+use nitro_log::NitroLogger;
+
 use rand::seq::SliceRandom;
 use regex::Regex;
-use rraw::auth::{AnonymousAuthenticator, PasswordAuthenticator};
+use rraw::auth::PasswordAuthenticator;
 use rraw::me::Me;
-use rraw::responses::GenericResponse;
-use rraw::responses::subreddit::AboutSubreddit;
-use rraw::utils::error::APIError;
-use serenity::{
-    async_trait,
-    client::bridge::gateway::{ShardId, ShardManager},
-    framework::standard::{
-        Args,
-        buckets::{LimitedFor, RevertBucket},
-        CommandGroup,
-        CommandOptions, CommandResult, DispatchError, help_commands, HelpOptions, macros::{check, command, group, help, hook}, Reason,
-        StandardFramework,
-    },
-    http::Http,
-    model::{
-        channel::{Channel, Message},
-        gateway::Ready,
-        id::UserId,
-        permissions::Permissions,
-    },
-    prelude::*,
-    utils::{content_safe, ContentSafeOptions},
-};
-use serenity::{FutureExt, futures::future::BoxFuture};
+
 use serenity::client::bridge::gateway::GatewayIntents;
 use serenity::model::gateway::Activity;
 use serenity::model::guild::Member;
 use serenity::model::id::{ChannelId, GuildId};
 use serenity::model::prelude::User;
-use serenity::prelude::*;
+use serenity::{
+    async_trait,
+    framework::standard::{
+        help_commands,
+        macros::{command, group, help, hook},
+        Args, CommandGroup, CommandResult, DispatchError, HelpOptions, StandardFramework,
+    },
+    model::{channel::Message, gateway::Ready, id::UserId},
+    prelude::*,
+};
+use serenity::{futures::future::BoxFuture, FutureExt};
+
 use tokio::time::sleep;
 
-use crate::site::Authenticator;
 use crate::site::site_client::SiteClient;
+use crate::site::Authenticator;
 // You can construct a hook without the use of a macro, too.
 // This requires some boilerplate though and the following additional import.
-use crate::utils::{refresh_reddit_count, refresh_server_count, subreddit_info, user_info};
+use crate::utils::{
+    refresh_reddit_count, refresh_server_count, subreddit_info, user_info, Resources,
+};
 
 mod actions;
 mod admin;
@@ -85,8 +72,8 @@ mod models;
 mod moderator;
 mod register;
 mod schema;
-mod utils;
 pub mod site;
+mod utils;
 
 type DbPoolType = Arc<r2d2::Pool<ConnectionManager<MysqlConnection>>>;
 
@@ -117,7 +104,6 @@ impl Bot {
             site_client,
         }
     }
-
 
     fn test(&mut self) {
         println!("test");
@@ -190,23 +176,23 @@ impl EventHandler for Handler {
         let option = re.find_iter(msg.content.as_str());
         subreddit_info(ctx.clone(), option, &msg).await;
 
-
         let user_re = Regex::new("u/[A-Za-z0-9_-]+").unwrap();
         let option = user_re.find_iter(msg.content.as_str());
         user_info(ctx.clone(), option, &msg).await;
-        let x = msg.content.contains("");
+        let _x = msg.content.contains("");
         if msg.channel_id.to_string().eq("829825560930156615") {
             return;
         }
-        if (msg.content.contains("/s") || msg.content.contains("/j")) && !msg.content.contains("http") {
-
+        if (msg.content.contains("/s") || msg.content.contains("/j"))
+            && !msg.content.contains("http")
+        {
             let file = lines_from_file(Path::new("resources").join("joke-gifs"));
             let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
 
             let _msg = msg
                 .channel_id
                 .send_message(&ctx.http, |m| {
-                    m.reference_message(    &msg);
+                    m.reference_message(&msg);
 
                     m.embed(|e| {
                         e.title("IT IS A JOKE");
@@ -257,13 +243,20 @@ impl EventHandler for Handler {
                 std::env::var("CLIENT_KEY").unwrap().as_str(),
                 std::env::var("CLIENT_SECRET").unwrap().as_str(),
                 std::env::var("REDDIT_USER").unwrap().as_str(),
-                std::env::var("PASSWORD").unwrap().as_str());
-            let reddit = Me::login(arc, "RedditNobility Discord bot(by u/KingTuxWH)".to_string()).await.unwrap();
+                std::env::var("PASSWORD").unwrap().as_str(),
+            );
+            let reddit = Me::login(
+                arc,
+                "RedditNobility Discord bot(by u/KingTuxWH)".to_string(),
+            )
+            .await
+            .unwrap();
             loop {
                 refresh_reddit_count(status.clone(), &reddit).await;
                 sleep(Duration::minutes(15).to_std().unwrap()).await;
             }
-        }).await;
+        })
+        .await;
     }
 }
 
@@ -342,17 +335,42 @@ fn _dispatch_error_no_macro<'fut>(
             }
         };
     }
-        .boxed()
+    .boxed()
 }
 embed_migrations!();
 #[tokio::main]
 async fn main() {
+    if let Err(error) = dotenv::dotenv() {
+        println!("Unable to load dotenv {}", error);
+        return;
+    }
+    let file = match std::env::var("MODE")
+        .unwrap_or("DEBUG".to_string())
+        .as_str()
+    {
+        "DEBUG" => "log-debug.json",
+        "RELEASE" => "log-release.json",
+        _ => {
+            panic!("Must be Release or Debug")
+        }
+    };
+    /*
+    let config: Config = serde_json::from_str(Resources::file_get_string(file).as_str()).unwrap();
+
+    let result = NitroLogger::load(config, None);
+    if let Err(error) = result {
+        println!("{}", error);
+       // return;
+    }
+    */
+
     let file_appender = tracing_appender::rolling::hourly("log/discord", "discord.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-    tracing_subscriber::fmt()
-        .with_writer(non_blocking)
-        .init();
-    dotenv::dotenv().ok();
+    tracing_subscriber::fmt().with_writer(non_blocking).init();
+
+
+
+
     let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL");
     let manager = ConnectionManager::<MysqlConnection>::new(connspec);
     let pool = r2d2::Pool::builder()
@@ -391,10 +409,7 @@ async fn main() {
             token: None,
             username: std::env::var("SITE_USERNAME").unwrap(),
             password: std::env::var("SITE_PASSWORD").unwrap(),
-            client_key: std::env::var("SITE_CLIENT_TOKEN").unwrap(),
-            client_id: std::env::var("SITE_CLIENT_ID").unwrap().parse().unwrap(),
         };
-
 
         let mut data = client.data.write().await;
         data.insert::<DataHolder>(Bot::new(SiteClient::new(authenticator).await));

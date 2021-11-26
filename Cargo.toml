@@ -1,5 +1,5 @@
 [package]
-name = "RedditNoblityBot"
+name = "rn_bot"
 version = "0.1.0"
 authors = ["Wyatt Jacob Herkamp <wherkamp@kingtux.me>"]
 edition = "2018"
@@ -7,13 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel = { version = "1.4.7", features = ["mysql", "r2d2"] }
+diesel = { version = "1.4.8", features = ["mysql", "r2d2"] }
 diesel_migrations = "1.4.0"
 r2d2 = "0.8.9"
-r2d2_mysql = "*"
+r2d2_mysql = "21.0.0"
 dotenv = "0.15.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.72"
+serde = { version = "1.0.130", features = ["derive"] }
+serde_json = "1.0.64"
 rraw = { git = "https://github.com/wherkamp/rraw.git"}
 rand = { git = "https://github.com/rust-random/rand" }
 craftping = "0.2.1"
@@ -22,17 +22,18 @@ hyper-tls = "0.5.0"
 chrono = "0.4.19"
 hostname = "0.3.1"
 strum = { version = "0.23.0", features = ["derive"] }
-strum_macros = "0.21.0"
+strum_macros = "0.23.0"
 derive_more = "0.99.16"
 regex = "1.5.4"
 num-format = "0.4.0"
-log4rs = "1.0.0"
+nitro_log = { git = "https://github.com/wherkamp/nitro_log", features = ["time", "colors"] }
 log = "0.4.14"
 tracing-appender = "0.1"
 tracing-subscriber = "0.2.19"
+rust-embed = { version = "6.2.0", features = ["interpolate-folder-path"] }
 [dependencies.serenity]
 features = ["framework", "standard_framework", "rustls_backend", "model", "client"]
-version = "0.10.8"
+version = "0.10.9"
 [dependencies.tokio]
-version = "1.8.1"
+version = "1.14.0"
 features = ["macros", "rt-multi-thread"]

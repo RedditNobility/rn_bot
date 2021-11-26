@@ -6,7 +6,8 @@ use hyper::StatusCode;
 use serde_json;
 use serenity::client::Context;
 use serenity::model::channel::Message;
-use serenity::model::id::{ChannelId};
+use serenity::model::id::ChannelId;
+use serenity::prelude::SerenityError;
 
 /// Error type that occurs when an API request fails for some reason.
 #[derive(Debug)]
@@ -99,9 +100,15 @@ impl Display for BotError {
     }
 }
 
+impl Error for BotError {}
+
 impl From<diesel::result::Error> for BotError {
     fn from(err: diesel::result::Error) -> BotError {
         BotError::DBError(err)
+    }
+}impl From<SerenityError> for BotError {
+    fn from(err: SerenityError) -> BotError {
+        BotError::SerenityError(err)
     }
 }
 
@@ -116,3 +123,4 @@ impl From<serde_json::Error> for BotError {
         BotError::JSONError(err)
     }
 }
+

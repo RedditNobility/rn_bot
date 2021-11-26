@@ -1,34 +1,36 @@
 use rraw::me::Me;
-use rraw::responses::GenericResponse;
-use rraw::responses::subreddit::AboutSubreddit;
-use rraw::utils::error::APIError;
-use serenity::{
-    async_trait,
-    client::bridge::gateway::{ShardId, ShardManager},
-    framework::standard::{
-        Args,
-        buckets::{LimitedFor, RevertBucket},
-        CommandGroup,
-        CommandOptions, CommandResult, DispatchError, help_commands, HelpOptions, macros::{check, command, group, help, hook}, Reason,
-        StandardFramework,
-    },
-    http::Http,
-    model::{
-        channel::{Channel, Message},
-        gateway::Ready,
-        id::UserId,
-        permissions::Permissions,
-    },
-    prelude::*,
-    utils::{content_safe, ContentSafeOptions},
-};
-use serenity::model::id::ChannelId;
+use std::fs::read;
+use std::path::Path;
 
-use crate::{Bot, DataHolder};
-use num_format::{ToFormattedString, Locale};
-use rraw::auth::AnonymousAuthenticator;
-use regex::Matches;
+use rraw::utils::error::APIError;
+use rust_embed::RustEmbed;
+use serenity::model::id::ChannelId;
+use serenity::{model::channel::Message, prelude::*};
+
 use hyper::StatusCode;
+use num_format::{Locale, ToFormattedString};
+use regex::Matches;
+use rraw::auth::AnonymousAuthenticator;
+use crate::boterror::BotError;
+
+#[derive(RustEmbed)]
+#[folder = "$CARGO_MANIFEST_DIR/resources"]
+pub struct Resources;
+
+impl Resources {
+    pub fn file_get(file: &str) -> Vec<u8> {
+        let buf = Path::new("resources").join(file);
+        if buf.exists() {
+            read(buf).unwrap()
+        } else {
+            Resources::get(file).unwrap().data.to_vec()
+        }
+    }
+    pub fn file_get_string(file: &str) -> String {
+        let vec = Resources::file_get(file);
+        String::from_utf8(vec).unwrap()
+    }
+}
 
 pub async fn refresh_server_count(status: &Context) {
     let channel = ChannelId(830636660197687316);
@@ -52,10 +54,16 @@ pub async fn refresh_server_count(status: &Context) {
         .edit(&status.http, |c| c.name(format!("Server Size: {}", i)))
         .await;
 }
+
 pub async fn subreddit_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
     for x in matches {
         let text = x.as_str().replace("r/", "");
-        let me = Me::login(AnonymousAuthenticator::new(), "Reddit Nobility Bot u/KingTuxWH".to_string()).await.unwrap();
+        let me = Me::login(
+            AnonymousAuthenticator::new(),
+            "Reddit Nobility Bot u/KingTuxWH".to_string(),
+        )
+            .await
+            .unwrap();
         let subreddit = me.subreddit(text.clone());
         match subreddit.about().await {
             Ok(sub) => {
@@ -67,8 +75,21 @@ pub async fn subreddit_info(ctx: Context, matches: Matches<'_, '_>, msg: &Messag
                             let subreddit1 = sub.data;
                             e.url(format!("https://reddit.com{}", subreddit1.url.unwrap()));
                             e.title(subreddit1.display_name.unwrap());
-                            e.field("Members", subreddit1.subscribers.unwrap().to_formatted_string(&Locale::en), true);
-                            e.field("Description", subreddit1.public_description.unwrap_or("Missing Description ".to_string()), false);
+                            e.field(
+                                "Members",
+                                subreddit1
+                                    .subscribers
+                                    .unwrap()
+                                    .to_formatted_string(&Locale::en),
+                                true,
+                            );
+                            e.field(
+                                "Description",
+                                subreddit1
+                                    .public_description
+                                    .unwrap_or("Missing Description ".to_string()),
+                                false,
+                            );
                             e.footer(|f| {
                                 f.text("Robotic Monarch");
                                 f
@@ -80,37 +101,35 @@ pub async fn subreddit_info(ctx: Context, matches: Matches<'_, '_>, msg: &Messag
                     })
                     .await;
             }
-            Err(err) => {
-                match err {
-                    APIError::ExhaustedListing => {}
-                    APIError::HTTPError(http) => {
-                        if http == StatusCode::FORBIDDEN {
-                            let _msg = msg
-                                .channel_id
-                                .send_message(&ctx.http, |m| {
-                                    m.reference_message(msg);
-                                    m.embed(|e| {
-                                        e.url(format!("https://reddit.com/r/{}", text.clone()));
-                                        e.title(text.clone());
-                                        e.field("Description", "Hidden Sub", false);
-                                        e.footer(|f| {
-                                            f.text("Robotic Monarch");
-                                            f
-                                        });
-
-                                        e
+            Err(err) => match err {
+                APIError::ExhaustedListing => {}
+                APIError::HTTPError(http) => {
+                    if http == StatusCode::FORBIDDEN {
+                        let _msg = msg
+                            .channel_id
+                            .send_message(&ctx.http, |m| {
+                                m.reference_message(msg);
+                                m.embed(|e| {
+                                    e.url(format!("https://reddit.com/r/{}", text.clone()));
+                                    e.title(text.clone());
+                                    e.field("Description", "Hidden Sub", false);
+                                    e.footer(|f| {
+                                        f.text("Robotic Monarch");
+                                        f
                                     });
-                                    m
-                                })
-                                .await;
-                        }
+
+                                    e
+                                });
+                                m
+                            })
+                            .await;
                     }
-                    APIError::ReqwestError(_) => {}
-                    APIError::JSONError(_) => {}
-                    APIError::ExpiredToken => {}
-                    APIError::Custom(_) => {}
                 }
-            }
+                APIError::ReqwestError(_) => {}
+                APIError::JSONError(_) => {}
+                APIError::ExpiredToken => {}
+                APIError::Custom(_) => {}
+            },
         };
     }
 }
@@ -118,7 +137,12 @@ pub async fn subreddit_info(ctx: Context, matches: Matches<'_, '_>, msg: &Messag
 pub async fn user_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
     for x in matches {
         let text = x.as_str().replace("u/", "");
-        let me = Me::login(AnonymousAuthenticator::new(), "Reddit Nobility Bot u/KingTuxWH".to_string()).await.unwrap();
+        let me = Me::login(
+            AnonymousAuthenticator::new(),
+            "Reddit Nobility Bot u/KingTuxWH".to_string(),
+        )
+            .await
+            .unwrap();
         let user = me.user(text.clone());
         match user.about().await {
             Ok(user) => {
@@ -129,10 +153,22 @@ pub async fn user_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
                         m.embed(|e| {
                             let user = user.data;
                             e.url(format!("https://reddit.com/u/{}", user.name));
-                            e.field("Total Karma", user.total_karma.to_formatted_string(&Locale::en), true);
-                            e.field("Comment Karma", user.comment_karma.to_formatted_string(&Locale::en), true);
-                            e.field("Link Karma", user.link_karma.to_formatted_string(&Locale::en), true);
-                             e.title(user.name);
+                            e.field(
+                                "Total Karma",
+                                user.total_karma.unwrap_or(0).to_formatted_string(&Locale::en),
+                                true,
+                            );
+                            e.field(
+                                "Comment Karma",
+                                user.comment_karma.unwrap_or(0).to_formatted_string(&Locale::en),
+                                true,
+                            );
+                            e.field(
+                                "Link Karma",
+                                user.link_karma.unwrap_or(0).to_formatted_string(&Locale::en),
+                                true,
+                            );
+                            e.title(user.name);
                             if let Some(img) = user.snoovatar_img {
                                 if !img.is_empty() {
                                     e.image(img);
@@ -155,28 +191,25 @@ pub async fn user_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
                     })
                     .await;
             }
-            Err(err) => {
-                match err {
-                    APIError::ExhaustedListing => {}
-                    APIError::HTTPError(_) => {}
-                    APIError::ReqwestError(_) => {}
-                    APIError::JSONError(_) => {}
-                    APIError::ExpiredToken => {}
-                    APIError::Custom(_) => {}
-                }
-            }
+            Err(err) => match err {
+                APIError::ExhaustedListing => {}
+                APIError::HTTPError(_) => {}
+                APIError::ReqwestError(_) => {}
+                APIError::JSONError(_) => {}
+                APIError::ExpiredToken => {}
+                APIError::Custom(_) => {}
+            },
         };
     }
 }
-pub async fn refresh_reddit_count(status: Context, me: &Me) {
+
+pub async fn refresh_reddit_count(status: Context, me: &Me) ->Result<(), BotError>{
     let channel = ChannelId(833707456990281818);
 
     let subreddit = me.subreddit("RedditNobility".to_string());
     let result = subreddit.about().await;
     let count = match result {
-        Ok(ok) => {
-            ok.data.subscribers.unwrap().to_string()
-        }
+        Ok(ok) => ok.data.subscribers.unwrap().to_string(),
         Err(er) => {
             match er {
                 APIError::ExhaustedListing => {
@@ -187,7 +220,6 @@ pub async fn refresh_reddit_count(status: Context, me: &Me) {
                 }
                 APIError::ReqwestError(_) => {
                     println!("Request");
-
                 }
                 APIError::JSONError(_) => {
                     println!("JSON");
@@ -197,7 +229,6 @@ pub async fn refresh_reddit_count(status: Context, me: &Me) {
                 }
                 APIError::Custom(s) => {
                     println!("Error: {}", s);
-
                 }
             }
             "Error".to_string()
@@ -206,12 +237,12 @@ pub async fn refresh_reddit_count(status: Context, me: &Me) {
 
     channel
         .to_channel(&status.http)
-        .await
-        .unwrap()
+        .await?
         .guild()
         .unwrap()
         .edit(&status.http, |c| {
             c.name(format!("Reddit Subscribers: {}", count))
         })
-        .await;
+        .await?;
+    return Ok(());
 }

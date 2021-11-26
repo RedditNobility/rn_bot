@@ -1,28 +1,13 @@
 use serenity::{
-    async_trait,
-    client::bridge::gateway::{ShardId, ShardManager},
     framework::standard::{
-        buckets::{LimitedFor, RevertBucket},
-        help_commands,
-        macros::{check, command, group, help, hook},
-        Args, CommandGroup, CommandOptions, CommandResult, DispatchError, HelpOptions, Reason,
-        StandardFramework,
+        macros::{command, group},
+        Args, CommandResult,
     },
-    http::Http,
-    model::{
-        channel::{Channel, Message},
-        gateway::Ready,
-        id::UserId,
-        permissions::Permissions,
-    },
+    model::channel::Message,
     prelude::*,
-    utils::{content_safe, ContentSafeOptions},
 };
 
-
-use crate::{main, utils, Bot, DataHolder};
-
-
+use crate::utils;
 
 #[group]
 #[commands(rcount)]

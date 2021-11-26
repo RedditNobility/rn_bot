@@ -3,30 +3,17 @@ use std::string::ToString;
 // A command can have sub-commands, just like in command lines tools.
 // Imagine `cargo help` and `cargo help run`.
 use serenity::{
-    async_trait,
-    client::bridge::gateway::{ShardId, ShardManager},
     framework::standard::{
-        Args,
-        buckets::{LimitedFor, RevertBucket},
-        CommandGroup,
-        CommandOptions, CommandResult, DispatchError, help_commands, HelpOptions, macros::{check, command, group, help, hook}, Reason,
-        StandardFramework,
+        macros::{command, group},
+        Args, CommandResult,
     },
-    http::Http,
-    model::{
-        channel::{Channel, Message},
-        gateway::Ready,
-        id::UserId,
-        permissions::Permissions,
-    },
+    model::channel::Message,
     prelude::*,
-    utils::{content_safe, ContentSafeOptions},
 };
 
-use crate::{actions, Bot, DataHolder, DbPool, DbPoolType, site};
 use crate::boterror::BotError;
-use crate::models::User;
-use crate::schema::events::columns::active;
+use crate::{actions, site, Bot, DataHolder, DbPool, DbPoolType};
+
 use serenity::model::gateway::Activity;
 
 #[group]
@@ -34,14 +21,14 @@ use serenity::model::gateway::Activity;
 #[allowed_roles("Moderator")]
 struct Mod;
 #[command("setStatus")]
-async fn set_status(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn set_status(ctx: &Context, _msg: &Message, args: Args) -> CommandResult {
     let x = args.message();
     ctx.online().await;
     ctx.set_activity(Activity::playing(x)).await;
-    return Ok(())
+    return Ok(());
 }
 #[command("mod-info")]
-async fn mod_info(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn mod_info(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let data = ctx.data.read().await;
     let bot: &Bot = data.get::<DataHolder>().unwrap();
     let pool: &DbPoolType = data.get::<DbPool>().unwrap();
@@ -55,7 +42,9 @@ async fn mod_info(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
     if !msg.mentions.is_empty() {
         let x = actions::get_user_by_discord(msg.mentions.get(0).unwrap().id.to_string(), &conn);
         if let Err(error) = x {
-            BotError::DBError(error).discord_message(msg, "Unable to retrieve User", ctx).await;
+            BotError::DBError(error)
+                .discord_message(msg, "Unable to retrieve User", ctx)
+                .await;
             return Ok(());
         }
         let option = x.unwrap();
@@ -63,42 +52,49 @@ async fn mod_info(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
             msg.reply_ping(&ctx.http, "user is not registered").await;
             return Ok(());
         }
-        let reddit_user = bot.site_client.get_user(option.unwrap().reddit_username).await;
+        let reddit_user = bot
+            .site_client
+            .get_user(option.unwrap().reddit_username)
+            .await;
         if let Err(error) = reddit_user {
-            error.discord_message(msg, "Unable to make site request", ctx).await;
+            error
+                .discord_message(msg, "Unable to make site request", ctx)
+                .await;
             return Ok(());
         }
         let reddit_user = reddit_user.unwrap();
         if let None = reddit_user {
-            msg.reply_ping(&ctx.http, "I am going to need a beer for this one").await;
+            msg.reply_ping(&ctx.http, "I am going to need a beer for this one")
+                .await;
             return Ok(());
         }
         user = reddit_user;
-    }else{
+    } else {
         msg.reply_ping(&ctx.http, "Please mention a user").await;
-
     }
 
     if let Some(u) = user {
-        let _msg = msg.channel_id.send_message(&ctx.http, |m| {
-            m.reference_message(msg);
-            m.embed(|e| {
-                e.title(u.username);
-                e.field("Level", u.level.to_string(), true);
-                e.field("Status", u.status.to_string(), true);
-                if !u.moderator.is_empty(){
-                    e.field("Moderator", u.moderator, true);
-                }
-                e.field("Discoverer", u.discoverer.to_string(), true);
-                e.footer(|f| {
-                    f.text("Robotic Monarch");
-                    f
-                });
+        let _msg = msg
+            .channel_id
+            .send_message(&ctx.http, |m| {
+                m.reference_message(msg);
+                m.embed(|e| {
+                    e.title(u.username);
+                    e.field("Status", u.status.to_string(), true);
+                    if !u.reviewer.is_empty() {
+                        e.field("Reviewer", u.reviewer, true);
+                    }
+                    e.field("Discoverer", u.discoverer.to_string(), true);
+                    e.footer(|f| {
+                        f.text("Robotic Monarch");
+                        f
+                    });
 
-                e
-            });
-            m
-        }).await;
+                    e
+                });
+                m
+            })
+            .await;
     } else {
         msg.reply_ping(&ctx.http, "What!").await;
     }

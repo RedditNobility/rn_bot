@@ -1,10 +1,22 @@
 use serde::{Deserialize, Serialize};
 
-use std::fmt::{Display, Error, Formatter};
-use std::io::Write;
-use std::str::FromStr;
 use strum_macros::Display;
 use strum_macros::EnumString;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserPermissions {
+    #[serde(default)]
+    pub admin: bool,
+    #[serde(default)]
+    pub moderator: bool,
+    #[serde(default)]
+    pub submit: bool,
+    #[serde(default)]
+    pub review_user: bool,
+    #[serde(default)]
+    pub login: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthToken {
     pub id: i64,
@@ -13,12 +25,6 @@ pub struct AuthToken {
     pub created: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClientKey {
-    pub id: i64,
-    pub api_key: String,
-    pub created: i64,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserProperties {
@@ -36,14 +42,14 @@ impl UserProperties {
     }
 }
 
-
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
     pub id: i64,
+    pub discord_id: i64,
     //The Reddit Username
     pub username: String,
     //USER, MODERATOR, ADMIN
+    pub permissions: UserPermissions,
     pub level: Level,
     //FOUND, DENIED, APPROVED, BANNED
     pub status: Status,
@@ -52,16 +58,14 @@ pub struct User {
     //Who found the user BOT if bot
     pub discoverer: String,
     //The Moderator who approved them or denied them. If the user was banned it will still be set to who approved them
-    pub moderator: String,
+    pub reviewer: String,
     // Custom Properties done through json.
     pub properties: UserProperties,
     //When the data was created
     pub created: i64,
 }
 
-
-
-#[derive(Debug, Deserialize, Serialize, Clone, Display, PartialEq, EnumString, )]
+#[derive(Debug, Deserialize, Serialize, Clone, Display, PartialEq, EnumString)]
 pub enum Status {
     Found,
     Denied,
@@ -70,7 +74,7 @@ pub enum Status {
 }
 
 //Found, Approved, Denied, Banned
-#[derive(Debug, Deserialize, Serialize, Clone, Display, PartialEq, EnumString, )]
+#[derive(Debug, Deserialize, Serialize, Clone, Display, PartialEq, EnumString)]
 pub enum Level {
     Admin,
     Moderator,

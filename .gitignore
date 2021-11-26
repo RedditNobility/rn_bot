@@ -1,4 +1,5 @@
 /target
-.env
+test/.env
 .idea
 *.iml
+test

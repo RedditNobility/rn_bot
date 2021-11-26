@@ -5,47 +5,23 @@ use crate::models::User;
 use crate::{actions, Bot, DataHolder, DbPool, DbPoolType};
 use diesel::prelude::*;
 use diesel::MysqlConnection;
-use hyper::client::{Client};
-use hyper::header::USER_AGENT;
-use hyper::http::request::Builder;
 
-use hyper::{Body, Method};
-use hyper_tls::HttpsConnector;
 use serde::{Deserialize, Serialize};
 use serenity::http::CacheHttp;
 use serenity::model::guild::Member;
 use serenity::model::id::RoleId;
 use serenity::prelude::*;
 use serenity::{
-    async_trait,
-    client::bridge::gateway::{ShardId, ShardManager},
     framework::standard::{
-        buckets::{LimitedFor, RevertBucket},
-        help_commands,
-        macros::{check, command, group, help, hook},
-        Args, CommandGroup, CommandOptions, CommandResult, DispatchError, HelpOptions, Reason,
-        StandardFramework,
+        macros::{command, group},
+        Args, CommandResult,
     },
-    http::Http,
-    model::{
-        channel::{Channel, Message},
-        gateway::Ready,
-        id::UserId,
-        permissions::Permissions,
-    },
-    prelude::*,
-    utils::{content_safe, ContentSafeOptions},
+    model::{channel::Message, id::UserId},
 };
 
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    fmt::Write,
-    sync::Arc,
-};
 use crate::site::site_client::SiteClient;
-
+use std::fmt::Write;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[group]
 #[commands(register)]
@@ -59,63 +35,53 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let _x: &Bot = data.get::<DataHolder>().unwrap();
     let option = _args.current();
     let pool: &DbPoolType = data.get::<DbPool>().unwrap();
-    let conn = pool.get();
-    if conn.is_err() {
-        //TODO handle
-    }
-    let conn = conn.unwrap();
-    let result = is_registered(msg.author.id, &conn);
-    if result.is_err() {
-        result
-            .err()
-            .unwrap()
-            .discord_message(
-                msg,
-                "Unable to make database query. Please try again.",
+    let conn = pool.get()?;
+    let value = is_registered(msg.author.id, &conn)?;
+    if let Some(user) = value {
+        if msg
+            .author
+            .has_role(&ctx.http, msg.guild_id.unwrap(), RoleId(830277916944236584))
+            .await?
+        {
+            msg.channel_id
+                .send_message(&ctx.http, |m| {
+                    m.embed(|e| {
+                        e.title("You are already registered");
+                        e.footer(|f| {
+                            f.text("Robotic Monarch");
+                            f
+                        });
+                        e
+                    });
+                    m
+                })
+                .await;
+            return Ok(());
+        } else {
+            msg.channel_id
+                .send_message(&ctx.http, |m| {
+                    m.embed(|e| {
+                        e.title("You are already registered! Adding role!");
+                        e.footer(|f| {
+                            f.text("Robotic Monarch");
+                            f
+                        });
+                        e
+                    });
+                    m
+                })
+                .await;
+
+            register_user_discord(
                 &ctx,
+                user.reddit_username.as_str(),
+                msg.member(&ctx.http).await.unwrap(),
             )
-            .await;
-        return Ok(());
-    }
-    if let Ok(value) = result {
-        if let Some(user) = value {
-            if msg.author.has_role(&ctx.http, msg.guild_id.unwrap(), RoleId(830277916944236584)).await? {
-                msg.channel_id
-                    .send_message(&ctx.http, |m| {
-                        m.embed(|e| {
-                            e.title("You are already registered");
-                            e.footer(|f| {
-                                f.text("Robotic Monarch");
-                                f
-                            });
-                            e
-                        });
-                        m
-                    })
-                    .await;
-                return Ok(());
-            } else {
-                msg.channel_id
-                    .send_message(&ctx.http, |m| {
-                        m.embed(|e| {
-                            e.title("You are already registered! Adding role!");
-                            e.footer(|f| {
-                                f.text("Robotic Monarch");
-                                f
-                            });
-                            e
-                        });
-                        m
-                    })
-                    .await;
+                .await;
 
-                register_user_discord(&ctx, user.reddit_username.as_str(), msg.member(&ctx.http).await.unwrap()).await;
-
-                return Ok(());
-            }
+            return Ok(());
         }
     }
-
 
     if option.is_none() {
         msg.channel_id
@@ -133,19 +99,13 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             .await;
         return Ok(());
     }
+
+
     let username = option.unwrap().replace("u/", "");
     let user = validate_user(&*username, &_x.site_client).await;
-    let result1 = is_registered_reddit(username.clone(), &conn);
-    if result1.is_err() {
-        //    pub async fn discord_message(&self, message: &Message, error: &str, context: &Context) {
-        result1
-            .err()
-            .unwrap()
-            .discord_message(msg, "Unable to verify Reddit Name.", &ctx)
-            .await;
-        return Ok(());
-    }
-    if result1.unwrap() {
+    let result1 = is_registered_reddit(username.clone(), &conn)?;
+
+    if result1 {
         msg.channel_id
             .send_message(&ctx.http, |m| {
                 m.embed(|e| {
@@ -267,13 +227,9 @@ fn register_user(
 }
 
 async fn validate_user(p0: &str, site_client: &SiteClient) -> Result<bool, BotError> {
-    let x = site_client.get_user(p0.parse().unwrap()).await;
-    if let Err(error) = x {
-        return Err(error);
-    } else if let Ok(ok) = x {
-        return Ok(ok.is_some());
-    }
-    return Ok(false);
+    let x = site_client.get_user(p0.parse().unwrap()).await?;
+
+    return Ok(x.is_some());
 }
 
 fn is_registered(p0: UserId, connect: &MysqlConnection) -> Result<Option<User>, BotError> {
@@ -285,7 +241,10 @@ fn is_registered(p0: UserId, connect: &MysqlConnection) -> Result<Option<User>, 
     return Ok(result);
 }
 
-fn is_registered_reddit(reddit_username: String, connect: &MysqlConnection) -> Result<bool, BotError> {
+fn is_registered_reddit(
+    reddit_username: String,
+    connect: &MysqlConnection,
+) -> Result<bool, BotError> {
     let x = actions::get_user_by_reddit(reddit_username, connect);
     if x.is_err() {
         return Err(BotError::DBError(x.err().unwrap()));

@@ -16,12 +16,8 @@ pub struct APIError {
     pub error_code: Option<String>,
 }
 
-impl<T: Serialize> APIResponse::<T> {
+impl<T: Serialize> APIResponse<T> {
     pub fn new(success: bool, data: Option<T>) -> APIResponse<T> {
-        return APIResponse {
-            success,
-            data,
-        };
+        return APIResponse { success, data };
     }
-    
 }

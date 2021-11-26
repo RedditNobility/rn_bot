@@ -2,7 +2,7 @@ use diesel::prelude::*;
 use diesel::MysqlConnection;
 
 use crate::models;
-use crate::models::{User};
+use crate::models::User;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn get_user_by_discord(
@@ -15,7 +15,6 @@ pub fn get_user_by_discord(
         .filter(discord_id.eq(discord))
         .first::<models::User>(conn)
         .optional()?;
-
 
     Ok(found)
 }
