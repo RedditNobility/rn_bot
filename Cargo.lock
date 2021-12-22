@@ -1805,7 +1805,7 @@ dependencies = [
 [[package]]
 name = "rraw"
 version = "0.0.2"
-source = "git+https://github.com/wherkamp/rraw.git#ba693e49635a500f15745ba91e3952cb1fd6dc2d"
+source = "git+https://github.com/wherkamp/rraw.git#ecade8b8a79bfb6a76e70c63ad59071e789ffd7f"
 dependencies = [
  "async-trait",
  "base64 0.13.0",
@@ -2611,7 +2611,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
  "cfg-if",
- "rand 0.8.4",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
