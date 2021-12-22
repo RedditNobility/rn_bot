@@ -129,6 +129,7 @@ pub async fn subreddit_info(ctx: Context, matches: Matches<'_, '_>, msg: &Messag
                 APIError::JSONError(_) => {}
                 APIError::ExpiredToken => {}
                 APIError::Custom(_) => {}
+                APIError::NotFound => {}
             },
         };
     }
@@ -198,6 +199,7 @@ pub async fn user_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
                 APIError::JSONError(_) => {}
                 APIError::ExpiredToken => {}
                 APIError::Custom(_) => {}
+                APIError::NotFound => {}
             },
         };
     }
@@ -230,6 +232,7 @@ pub async fn refresh_reddit_count(status: Context, me: &Me) ->Result<(), BotErro
                 APIError::Custom(s) => {
                     println!("Error: {}", s);
                 }
+                APIError::NotFound => {}
             }
             "Error".to_string()
         }

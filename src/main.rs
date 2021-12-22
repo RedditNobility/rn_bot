@@ -53,7 +53,7 @@ use serenity::{
     prelude::*,
 };
 use serenity::{futures::future::BoxFuture, FutureExt};
-
+use std::net::TcpStream;
 use tokio::time::sleep;
 
 use crate::site::site_client::SiteClient;
@@ -249,14 +249,14 @@ impl EventHandler for Handler {
                 arc,
                 "RedditNobility Discord bot(by u/KingTuxWH)".to_string(),
             )
-            .await
-            .unwrap();
+                .await
+                .unwrap();
             loop {
                 refresh_reddit_count(status.clone(), &reddit).await;
                 sleep(Duration::minutes(15).to_std().unwrap()).await;
             }
         })
-        .await;
+            .await;
     }
 }
 
@@ -335,7 +335,7 @@ fn _dispatch_error_no_macro<'fut>(
             }
         };
     }
-    .boxed()
+        .boxed()
 }
 embed_migrations!();
 #[tokio::main]
@@ -367,8 +367,6 @@ async fn main() {
     let file_appender = tracing_appender::rolling::hourly("log/discord", "discord.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt().with_writer(non_blocking).init();
-
-
 
 
     let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL");
@@ -547,19 +545,22 @@ async fn minecraft(ctx: &Context, msg: &Message) -> CommandResult {
 #[aliases("van")]
 #[description("Gets information about the Vanilla MC Server")]
 async fn vanilla(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let pong: Result<Response, Error> = ping("play.redditnobility.org", 25565);
+    let hostname = "play.redditnobility.org";
+    let port = 25565;
+    let mut stream = TcpStream::connect((hostname, port)).unwrap();
+    let pong: Result<Response, Error> = ping(&mut stream, hostname, port);
     let _msg = msg.channel_id.send_message(&ctx.http, |m| {
         m.reference_message(msg);
         m.embed(|e| {
             e.title("RedditNobility Minecraft Vanilla Server Info");
-            e.field("IP", "play.redditnobility.org", true);
+            e.field("IP", hostname, true);
             e.field("Online", pong.is_ok(), true);
             if pong.is_ok() {
                 let response = pong.unwrap();
                 e.field("Minecraft Version", response.version.replace("TuxServer ", ""), true);
                 e.field("Online Players", response.online_players, true);
             }
-            e.field("Description", "An open vanilla survival game. Open to all nobility and even friend(Just message KingTuxWH or Darth_Dan). Become whitelisted at https://forms.gle/1sxSqtGzpVnKt4jHA", false);
+            e.field("Description", "An open vanilla survival game. Open to all nobility and even friend(Just message KingTuxWH or Darth_Dan).", false);
             e.footer(|f| {
                 f.text("Robotic Monarch");
                 f
@@ -576,8 +577,10 @@ async fn vanilla(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[aliases("mod")]
 #[description("Gets information about the modded MC Server")]
 async fn modded(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let pong: Result<Response, Error> = ping("46.105.77.36", 25579);
-
+    let hostname = "46.105.77.36";
+    let port = 25579;
+    let mut stream = TcpStream::connect((hostname, port)).unwrap();
+    let pong: Result<Response, Error> = ping(&mut stream, hostname, port);
     let _msg = msg
         .channel_id
         .send_message(&ctx.http, |m| {
