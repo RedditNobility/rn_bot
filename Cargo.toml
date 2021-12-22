@@ -16,7 +16,7 @@ serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.64"
 rraw = { git = "https://github.com/wherkamp/rraw.git"}
 rand = { git = "https://github.com/rust-random/rand" }
-craftping = "0.2.1"
+craftping = "0.3.0"
 hyper = "0.14.7"
 hyper-tls = "0.5.0"
 chrono = "0.4.19"
@@ -29,7 +29,7 @@ num-format = "0.4.0"
 nitro_log = { git = "https://github.com/wherkamp/nitro_log", features = ["time", "colors"] }
 log = "0.4.14"
 tracing-appender = "0.1"
-tracing-subscriber = "0.2.19"
+tracing-subscriber = "0.3.2"
 rust-embed = { version = "6.2.0", features = ["interpolate-folder-path"] }
 [dependencies.serenity]
 features = ["framework", "standard_framework", "rustls_backend", "model", "client"]
