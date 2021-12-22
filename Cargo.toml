@@ -23,7 +23,7 @@ chrono = "0.4.19"
 hostname = "0.3.1"
 strum = { version = "0.23.0", features = ["derive"] }
 strum_macros = "0.23.0"
-derive_more = "0.99.16"
+derive_more = "0.99.17"
 regex = "1.5.4"
 num-format = "0.4.0"
 nitro_log = { git = "https://github.com/wherkamp/nitro_log", features = ["time", "colors"] }
