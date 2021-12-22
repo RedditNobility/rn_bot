@@ -50,7 +50,6 @@ pub struct User {
     pub username: String,
     //USER, MODERATOR, ADMIN
     pub permissions: UserPermissions,
-    pub level: Level,
     //FOUND, DENIED, APPROVED, BANNED
     pub status: Status,
     //When was their status changed from FOUND to DENIED or APPROVED
