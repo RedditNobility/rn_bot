@@ -11,6 +11,7 @@ use hyper::StatusCode;
 use num_format::{Locale, ToFormattedString};
 use regex::Matches;
 use rraw::auth::AnonymousAuthenticator;
+use serenity::model::guild::Member;
 use crate::boterror::BotError;
 
 #[derive(RustEmbed)]
@@ -34,7 +35,7 @@ impl Resources {
 
 pub async fn refresh_server_count(status: &Context) {
     let channel = ChannelId(830636660197687316);
-    let i = channel
+    let server_size = channel
         .to_channel(&status.http)
         .await
         .unwrap()
@@ -43,15 +44,14 @@ pub async fn refresh_server_count(status: &Context) {
         .guild_id
         .members(&status.http, None, None)
         .await
-        .unwrap()
-        .len();
+        .unwrap().into_iter().filter(|x| { !x.user.bot }).collect::<Vec<Member>>().len();
     channel
         .to_channel(&status.http)
         .await
         .unwrap()
         .guild()
         .unwrap()
-        .edit(&status.http, |c| c.name(format!("Server Size: {}", i)))
+        .edit(&status.http, |c| c.name(format!("Server Size: {}", server_size)))
         .await;
 }
 
@@ -205,7 +205,7 @@ pub async fn user_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
     }
 }
 
-pub async fn refresh_reddit_count(status: Context, me: &Me) ->Result<(), BotError>{
+pub async fn refresh_reddit_count(status: Context, me: &Me) -> Result<(), BotError> {
     let channel = ChannelId(833707456990281818);
 
     let subreddit = me.subreddit("RedditNobility".to_string());
