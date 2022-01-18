@@ -179,30 +179,8 @@ impl EventHandler for Handler {
         let user_re = Regex::new("u/[A-Za-z0-9_-]+").unwrap();
         let option = user_re.find_iter(msg.content.as_str());
         user_info(ctx.clone(), option, &msg).await;
-        let _x = msg.content.contains("");
         if msg.channel_id.to_string().eq("829825560930156615") {
             return;
-        }
-        if (msg.content.contains("/s") || msg.content.contains("/j"))
-            && !msg.content.contains("http")
-        {
-            let file = lines_from_file(Path::new("resources").join("joke-gifs"));
-            let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
-
-            let _msg = msg
-                .channel_id
-                .send_message(&ctx.http, |m| {
-                    m.reference_message(&msg);
-
-                    m.embed(|e| {
-                        e.title("IT IS A JOKE");
-                        e.image(option);
-
-                        e
-                    });
-                    m
-                })
-                .await;
         }
         if msg.author.id.to_string().eq("411465364103495680") {
             if msg.content.contains("*") {
@@ -211,26 +189,6 @@ impl EventHandler for Handler {
         }
         if msg.is_own(ctx.cache).await {
             return;
-        }
-        let _x = ctx.data.read().await;
-
-        if msg.content.clone().to_lowercase().contains("fuck zorthan") {
-            let _msg = msg
-                .channel_id
-                .send_message(&ctx.http, |m| {
-                    m.embed(|e| {
-                        e.title("No Fucking Zorthan");
-                        e.description("Zorthan does not deserve anything. Let him go!");
-                        e.footer(|f| {
-                            f.text("Robotic Monarch");
-                            f
-                        });
-
-                        e
-                    });
-                    m
-                })
-                .await;
         }
     }
     async fn ready(&self, status: Context, ready: Ready) {
