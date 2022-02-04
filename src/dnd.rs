@@ -58,7 +58,7 @@ async fn remove(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         if member.roles.contains(&RoleId(939176496709382205)){
             member.remove_role(&ctx.http, 939176496709382205).await.unwrap();
         }
-        msg.reply(&ctx.http, format!("Adding DND Role to {}", x.name)).await;
+        msg.reply(&ctx.http, format!("Removing DND Role to {}", x.name)).await;
     }
     Ok(())
 }
