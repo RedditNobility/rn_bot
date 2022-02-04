@@ -74,6 +74,7 @@ mod register;
 mod schema;
 pub mod site;
 mod utils;
+mod dnd;
 
 type DbPoolType = Arc<r2d2::Pool<ConnectionManager<MysqlConnection>>>;
 
@@ -350,6 +351,7 @@ async fn main() {
         .help(&MY_HELP)
         .group(&GENERAL_GROUP)
         .group(&moderator::MOD_GROUP)
+        .group(&dnd::DND_GROUP)
         .group(&admin::ADMIN_GROUP)
         .group(&register::REGISTER_GROUP);
 
