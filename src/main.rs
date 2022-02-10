@@ -265,7 +265,7 @@ async fn delay_action(ctx: &Context, msg: &Message) {
 async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     match error {
 
-        DispatchError::LackingRole => {
+        DispatchError::LackingPermissions(_) => {
             if msg.author.id.eq(&UserId(487471903779586070)){
                 let x = ctx.http().get_emoji(msg.guild_id.unwrap().0, 941471475804807240).await.unwrap();
 
