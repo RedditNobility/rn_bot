@@ -40,7 +40,7 @@ use rraw::me::Me;
 use serenity::client::bridge::gateway::GatewayIntents;
 use serenity::model::gateway::Activity;
 use serenity::model::guild::Member;
-use serenity::model::id::{ChannelId, GuildId};
+use serenity::model::id::{ChannelId, EmojiId, GuildId};
 use serenity::model::prelude::User;
 use serenity::{
     async_trait,
@@ -54,6 +54,7 @@ use serenity::{
 };
 use serenity::{futures::future::BoxFuture, FutureExt};
 use std::net::TcpStream;
+use serenity::http::CacheHttp;
 use tokio::time::sleep;
 
 use crate::site::site_client::SiteClient;
@@ -262,17 +263,17 @@ async fn delay_action(ctx: &Context, msg: &Message) {
 
 #[hook]
 async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
-    if let DispatchError::Ratelimited(info) = error {
-        // We notify them only once.
-        if info.is_first_try {
-            let _ = msg
-                .channel_id
-                .say(
-                    &ctx.http,
-                    &format!("Try this again in {} seconds.", info.as_secs()),
-                )
-                .await;
+    match error {
+
+        DispatchError::LackingRole => {
+            if msg.author.id.eq(&UserId(487471903779586070)){
+                let x = ctx.http().get_emoji(msg.guild_id.unwrap().0, 941471475804807240).await.unwrap();
+
+                let string = format!("Listen. Tux Might like you. However, this does not give you special treatment with his little project here: {}", x);
+                msg.reply(&ctx.http,string).await;
+            }
         }
+        _ => {}
     }
 }
 
