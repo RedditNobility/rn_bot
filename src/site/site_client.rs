@@ -49,25 +49,15 @@ impl SiteClient {
             )
             .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
             .header(USER_AGENT, "RoboticMonarch Discord by KingTux :)")
-            .body(Body::empty());
-        if request.is_err() {
-            println!("{}", request.err().unwrap());
-            return Err(BotError::Other("Good Question".to_string()));
-        }
-        let request = request.unwrap();
+            .body(Body::empty())?;
 
-        let result = self.http.borrow().request(request).await;
-        if let Ok(re) = result {
-            let value = hyper::body::to_bytes(re.into_body()).await;
-            let string = String::from_utf8(value.unwrap().to_vec()).unwrap();
-            println!("Data {}", &string);
-            return Ok(string);
-        } else if let Err(error) = result {
-            return Err(BotError::HyperError(error));
+        let re = self.http.borrow().request(request).await?;
+        if !re.status().is_success(){
+            return Err(BotError::HTTPError(re.status()))
         }
-        Err(BotError::Other(
-            "I am extremely curious how we got here".to_string(),
-        ))
+        let value = hyper::body::to_bytes(re.into_body()).await?;
+        let string = String::from_utf8(value.to_vec()).unwrap();
+        Ok(string)
     }
     pub async fn get_user(&self, username: String) -> Result<Option<User>, BotError> {
         let value = self.get_json(format!("moderator/user/{}", username)).await?;

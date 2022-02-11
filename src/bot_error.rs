@@ -1,4 +1,3 @@
-
 use hyper::StatusCode;
 
 
@@ -24,12 +23,12 @@ pub enum BotError {
 }
 
 
-
 impl From<diesel::result::Error> for BotError {
     fn from(err: diesel::result::Error) -> BotError {
         BotError::DBError(err)
     }
 }
+
 impl From<SerenityError> for BotError {
     fn from(err: SerenityError) -> BotError {
         BotError::SerenityError(err)
@@ -39,6 +38,12 @@ impl From<SerenityError> for BotError {
 impl From<hyper::Error> for BotError {
     fn from(err: hyper::Error) -> BotError {
         BotError::HyperError(err)
+    }
+}
+
+impl From<hyper::http::Error> for BotError {
+    fn from(err: hyper::http::Error) -> BotError {
+        BotError::HyperHTTPError(err)
     }
 }
 
