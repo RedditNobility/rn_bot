@@ -157,22 +157,20 @@ impl EventHandler for Handler {
         refresh_server_count(&status).await.unwrap();
     }
     async fn message(&self, ctx: Context, msg: Message) {
-        let re = Regex::new("r/[A-Za-z0-9_-]+").unwrap();
-        let option = re.find_iter(msg.content.as_str());
-        subreddit_info(ctx.clone(), option, &msg).await;
-
-        let user_re = Regex::new("u/[A-Za-z0-9_-]+").unwrap();
-        let option = user_re.find_iter(msg.content.as_str());
-        user_info(ctx.clone(), option, &msg).await;
         if msg.channel_id.to_string().eq("829825560930156615") {
             return;
         }
-        if msg.author.id.to_string().eq("411465364103495680") && msg.content.contains('*') {
-            msg.react(&ctx.http, '🙄').await;
-        }
-        if msg.is_own(ctx.cache).await {
+        if msg.is_own(&ctx.cache).await {
             return;
         }
+
+        let re = Regex::new("r/[A-Za-z0-9_-]+").unwrap();
+        let option = re.find_iter(msg.content.as_str());
+        subreddit_info(&ctx, option, &msg).await;
+
+        let user_re = Regex::new("u/[A-Za-z0-9_-]+").unwrap();
+        let option = user_re.find_iter(msg.content.as_str());
+        user_info(&ctx, option, &msg).await;
     }
     async fn ready(&self, status: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
@@ -190,15 +188,15 @@ impl EventHandler for Handler {
                 arc,
                 "RedditNobility Discord bot(by u/KingTuxWH)".to_string(),
             )
-            .await
-            .unwrap();
+                .await
+                .unwrap();
             loop {
                 refresh_reddit_count(status.clone(), &reddit).await.unwrap();
                 sleep(Duration::minutes(15).to_std().unwrap()).await;
             }
         })
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 }
 
@@ -240,8 +238,10 @@ async fn delay_action(ctx: &Context, msg: &Message) {
 
 #[hook]
 async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
-    match error {
-        DispatchError::LackingPermissions(_) => {
+    let error_log = ChannelId(834210453265317900);
+
+    let error_message = match error {
+        DispatchError::LackingPermissions(permission) => {
             if msg.author.id.eq(&UserId(487471903779586070)) {
                 let x = ctx
                     .http()
@@ -250,11 +250,35 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
                     .unwrap();
 
                 let string = format!("Listen. Tux Might like you. However, this does not give you special treatment with his little project here: {}", x);
-                msg.reply(&ctx.http, string).await;
+                msg.reply(&ctx.http, string).await.unwrap();
             }
+            format!("User {} is missing permission: {}", msg.author.name, permission)
         }
-        _ => {}
-    }
+        DispatchError::OnlyForOwners => {
+            format!("User {} has executed a command that is for Owners", msg.author.name)
+        }
+        DispatchError::LackingRole => {
+            format!("User {} has executed a command that is for a specific role.", msg.author.name)
+        }
+        value => {
+            format!("User {} has executed incorrectly. In Some way: {:?}", msg.author.name, value)
+        }
+    };
+    error_log
+        .send_message(&ctx.http, |m| {
+            m.embed(|e| {
+                e.title(format!("Dispatch Error"));
+                e.description(error_message);
+                e.footer(|f| {
+                    f.text("Robotic Monarch");
+                    f
+                });
+
+                e
+            });
+            m
+        })
+        .await.unwrap();
 }
 
 #[hook]

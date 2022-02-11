@@ -60,7 +60,7 @@ pub async fn refresh_server_count(status: &Context) -> Result<(), BotError> {
     Ok(())
 }
 
-pub async fn subreddit_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
+pub async fn subreddit_info(ctx: &Context, matches: Matches<'_, '_>, msg: &Message) {
     for x in matches {
         let text = x.as_str().replace("r/", "");
         let me = Me::login(
@@ -140,7 +140,7 @@ pub async fn subreddit_info(ctx: Context, matches: Matches<'_, '_>, msg: &Messag
     }
 }
 
-pub async fn user_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
+pub async fn user_info(ctx: &Context, matches: Matches<'_, '_>, msg: &Message) {
     for x in matches {
         let text = x.as_str().replace("u/", "");
         let me = Me::login(
