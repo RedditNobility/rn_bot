@@ -11,7 +11,6 @@ use serenity::{
     prelude::*,
 };
 
-use crate::bot_error::BotError;
 use crate::{actions, site, Bot, DataHolder, DbPool, DbPoolType};
 
 use serenity::model::gateway::Activity;
@@ -32,45 +31,26 @@ async fn mod_info(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let data = ctx.data.read().await;
     let bot: &Bot = data.get::<DataHolder>().unwrap();
     let pool: &DbPoolType = data.get::<DbPool>().unwrap();
-    let conn = pool.get();
-    if conn.is_err() {
-        msg.reply_ping(&ctx.http, "BAD CONN").await;
-        return Ok(());
-    }
-    let conn = conn.unwrap();
+    let conn = pool.get()?;
     let mut user: Option<site::model::User> = None;
     if !msg.mentions.is_empty() {
-        let x = actions::get_user_by_discord(msg.mentions.get(0).unwrap().id.to_string(), &conn);
-        if let Err(error) = x {
-            BotError::DBError(error)
-                .discord_message(msg, "Unable to retrieve User", ctx)
-                .await;
-            return Ok(());
-        }
-        let option = x.unwrap();
-        if option.is_none() {
-            msg.reply_ping(&ctx.http, "user is not registered").await;
+        let x = actions::get_user_by_discord(msg.mentions.get(0).unwrap().id.to_string(), &conn)?;
+        if x.is_none() {
+            msg.reply_ping(&ctx.http, "user is not registered").await?;
             return Ok(());
         }
         let reddit_user = bot
             .site_client
-            .get_user(option.unwrap().reddit_username)
-            .await;
-        if let Err(error) = reddit_user {
-            error
-                .discord_message(msg, "Unable to make site request", ctx)
-                .await;
-            return Ok(());
-        }
-        let reddit_user = reddit_user.unwrap();
+            .get_user(x.unwrap().reddit_username)
+            .await?;
         if reddit_user.is_none() {
             msg.reply_ping(&ctx.http, "I am going to need a beer for this one")
-                .await;
+                .await?;
             return Ok(());
         }
         user = reddit_user;
     } else {
-        msg.reply_ping(&ctx.http, "Please mention a user").await;
+        msg.reply_ping(&ctx.http, "Please mention a user").await?;
     }
 
     if let Some(u) = user {
@@ -96,7 +76,7 @@ async fn mod_info(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             })
             .await;
     } else {
-        msg.reply_ping(&ctx.http, "What!").await;
+        msg.reply_ping(&ctx.http, "What!").await.unwrap();
     }
 
     Ok(())

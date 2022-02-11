@@ -5,7 +5,6 @@ use crate::models::User;
 use crate::{actions, Bot, DataHolder, DbPool, DbPoolType};
 use diesel::MysqlConnection;
 
-use serde::{Deserialize, Serialize};
 use serenity::model::guild::Member;
 use serenity::model::id::RoleId;
 use serenity::prelude::*;
@@ -74,7 +73,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 user.reddit_username.as_str(),
                 msg.member(&ctx.http).await?,
             )
-            .await?;
+                .await?;
 
             Ok(())
         };
@@ -98,7 +97,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
 
     let username = option.unwrap().replace("u/", "");
-    let user = validate_user(&*username, &_x.site_client).await;
+    let user = validate_user(&*username, &_x.site_client).await?;
     let result1 = is_registered_reddit(username.clone(), &conn)?;
 
     if result1 {
@@ -118,13 +117,8 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             .await?;
         return Ok(());
     }
-    if user.is_err() {
-        user.err()
-            .unwrap()
-            .discord_message(msg, "Unable to verify Reddit Name.", ctx)
-            .await;
-        return Ok(());
-    } else if !user.unwrap() {
+
+    if !user {
         msg.channel_id
             .send_message(&ctx.http, |m| {
                 m.embed(|e| {
@@ -149,20 +143,9 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             .guild_id
             .member(&ctx.http, &msg.author.id)
             .await?;
-        let result2 = register_user(&*username, &id, &conn);
-        if result2.is_err() {
-            result2
-                .err()
-                .unwrap()
-                .discord_message(msg, "Unable to approve you", ctx)
-                .await;
-            return Ok(());
-        }
-        let result2 = register_user_discord(ctx, &*username, id).await;
-        if result2.is_err() {
-            result2.err().unwrap().discord_message(msg, "You were approved however,we were unable to add a Discord role. Please have a mod add it for you.", ctx).await;
-            return Ok(());
-        }
+        register_user(&*username, &id, &conn)?;
+        register_user_discord(ctx, &*username, id).await?;
+
         msg.channel_id
             .send_message(&ctx.http, |m| {
                 m.embed(|e| {
@@ -244,11 +227,3 @@ fn is_registered_reddit(
     Ok(result.is_some())
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WebsiteUser {
-    pub id: i64,
-    pub username: String,
-    pub status: String,
-    pub moderator: String,
-    pub created: i64,
-}
