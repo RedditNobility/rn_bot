@@ -97,7 +97,7 @@ impl EventHandler for Handler {
     async fn ready(&self, status: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
         status.online().await;
-        status.set_activity(Activity::playing("A coup!")).await;
+        status.set_activity(Activity::listening("For Tasks from the Nobles")).await;
 
         tokio::spawn(async move {
             let arc = PasswordAuthenticator::new(
