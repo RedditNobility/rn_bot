@@ -17,6 +17,6 @@ struct Admin;
 #[required_permissions("ADMINISTRATOR")]
 async fn rcount(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     msg.reply(&ctx.http, "Refreshed Server Count").await?;
-    utils::refresh_server_count(ctx).await;
+    utils::refresh_server_count(ctx).await?;
     Ok(())
 }

@@ -21,7 +21,7 @@ impl SiteClient {
         let https = HttpsConnector::new();
         let client = Client::builder().build::<_, hyper::Body>(https);
         let this = SiteClient {
-            site_url: std::env::var("SITE").unwrap_or("https://redditnobility.org".to_string()),
+            site_url: std::env::var("SITE").expect("Missing Site Value"),
             auth: Arc::new(Mutex::new(auth)),
             http: client,
         };

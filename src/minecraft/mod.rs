@@ -51,14 +51,14 @@ async fn vanilla(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let port = 25565;
     let mut stream = TcpStream::connect((hostname, port)).unwrap();
     let pong: Result<Response, Error> = ping(&mut stream, hostname, port);
+
     let _msg = msg.channel_id.send_message(&ctx.http, |m| {
         m.reference_message(msg);
         m.embed(|e| {
             e.title("RedditNobility Minecraft Vanilla Server Info");
             e.field("IP", hostname, true);
             e.field("Online", pong.is_ok(), true);
-            if pong.is_ok() {
-                let response = pong.unwrap();
+            if let Ok(response) = pong {
                 e.field("Minecraft Version", response.version.replace("TuxServer ", ""), true);
                 e.field("Online Players", response.online_players, true);
             }
@@ -91,8 +91,7 @@ async fn modded(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 e.title("RedditNobility Minecraft Modded Server Info");
                 e.field("IP", "play.mod.redditnobility.org", true);
                 e.field("Online", pong.is_ok(), true);
-                if pong.is_ok() {
-                    let response = pong.unwrap();
+                if let Ok(response) = pong {
                     e.field("Minecraft Version", response.version, true);
                     e.field("Online Players", response.online_players, true);
                 }

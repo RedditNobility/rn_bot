@@ -14,7 +14,6 @@ use hyper::StatusCode;
 use num_format::{Locale, ToFormattedString};
 use regex::Matches;
 use rraw::auth::AnonymousAuthenticator;
-use serenity::model::guild::Member;
 
 #[derive(RustEmbed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources"]
@@ -47,8 +46,7 @@ pub async fn refresh_server_count(status: &Context) -> Result<(), BotError> {
         .await?
         .into_iter()
         .filter(|x| !x.user.bot)
-        .collect::<Vec<Member>>()
-        .len();
+        .count();
     channel
         .to_channel(&status.http)
         .await
@@ -94,7 +92,7 @@ pub async fn subreddit_info(ctx: &Context, matches: Matches<'_, '_>, msg: &Messa
                                 "Description",
                                 subreddit1
                                     .public_description
-                                    .unwrap_or("Missing Description ".to_string()),
+                                    .unwrap_or_else(|| "Missing Description".to_string()),
                                 false,
                             );
                             e.footer(|f| {
