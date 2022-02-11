@@ -29,7 +29,7 @@ impl SiteClient {
         if let Err(error) = result {
             panic!("Unable to login {}", error);
         }
-        return this;
+        this
     }
     pub fn get_authenticator(&self) -> MutexGuard<Authenticator> {
         self.auth.lock().unwrap()
@@ -51,7 +51,7 @@ impl SiteClient {
             .header(USER_AGENT, "RoboticMonarch Discord by KingTux :)")
             .body(Body::empty());
         if request.is_err() {
-            println!("{}", request.err().unwrap().to_string());
+            println!("{}", request.err().unwrap());
             return Err(BotError::Other("Good Question".to_string()));
         }
         let request = request.unwrap();
@@ -65,9 +65,9 @@ impl SiteClient {
         } else if let Err(error) = result {
             return Err(BotError::HyperError(error));
         }
-        return Err(BotError::Other(
+        Err(BotError::Other(
             "I am extremely curious how we got here".to_string(),
-        ));
+        ))
     }
     pub async fn get_user(&self, username: String) -> Result<Option<User>, BotError> {
         println!("HEY");
@@ -83,8 +83,8 @@ impl SiteClient {
         } else if let Err(error) = x {
             return Err(error);
         }
-        return Err(BotError::Other(
+        Err(BotError::Other(
             "I am extremely curious how we got here".to_string(),
-        ));
+        ))
     }
 }

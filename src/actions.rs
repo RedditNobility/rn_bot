@@ -70,6 +70,6 @@ pub fn end_event(event: i64, conn: &MysqlConnection) -> Result<(), diesel::resul
                     .as_millis() as i64,
             )),
         ))
-        .execute(conn);
+        .execute(conn)?;
     Ok(())
 }

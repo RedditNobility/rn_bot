@@ -48,7 +48,7 @@ async fn mod_info(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             return Ok(());
         }
         let option = x.unwrap();
-        if let None = option {
+        if option.is_none() {
             msg.reply_ping(&ctx.http, "user is not registered").await;
             return Ok(());
         }
@@ -63,7 +63,7 @@ async fn mod_info(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             return Ok(());
         }
         let reddit_user = reddit_user.unwrap();
-        if let None = reddit_user {
+        if reddit_user.is_none() {
             msg.reply_ping(&ctx.http, "I am going to need a beer for this one")
                 .await;
             return Ok(());

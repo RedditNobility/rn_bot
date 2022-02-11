@@ -18,6 +18,6 @@ pub struct APIError {
 
 impl<T: Serialize> APIResponse<T> {
     pub fn new(success: bool, data: Option<T>) -> APIResponse<T> {
-        return APIResponse { success, data };
+        APIResponse { success, data }
     }
 }

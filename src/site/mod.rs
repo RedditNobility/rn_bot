@@ -32,7 +32,7 @@ impl Authenticator {
             .header(USER_AGENT, "RoboticMonarch Discord by KingTux :)")
             .body(Body::from(serde_json::to_string(self)?));
         if request.is_err() {
-            println!("{}", request.err().unwrap().to_string());
+            println!("{}", request.err().unwrap());
             return Err(BotError::Other("Good Question".to_string()));
         }
         let request = request.unwrap();
@@ -49,13 +49,13 @@ impl Authenticator {
 
             let value = String::from_utf8(value.unwrap().to_vec());
             println!("{}", value.unwrap());
-            return Err(BotError::HTTPError(hyper::StatusCode::BAD_REQUEST));
+            Err(BotError::HTTPError(hyper::StatusCode::BAD_REQUEST))
         } else {
             let value = hyper::body::to_bytes(result.into_body()).await;
 
             let value = String::from_utf8(value.unwrap().to_vec());
             let string = value.unwrap();
-            println!("{}", string.clone());
+            println!("{}", string);
             let result1: Result<APIResponse<AuthToken>, serde_json::Error> =
                 serde_json::from_str(&string);
             if let Ok(response) = result1 {
@@ -64,7 +64,7 @@ impl Authenticator {
                     return Ok(());
                 }
             }
-            return Err(BotError::Other("Unable to login".to_string()));
+            Err(BotError::Other("Unable to login".to_string()))
         }
     }
 

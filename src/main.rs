@@ -1,13 +1,3 @@
-//! Requires the 'framework' feature flag be enabled in your project's
-//! `Cargo.toml`.
-//!
-//! This can be enabled by specifying the feature in the dependency section:
-//!
-//! ```toml
-//! [dependencies.serenity]
-//! git = "https://github.com/serenity-rs/serenity.git"
-//! features = ["framework", "standard_framework"]
-//! ```
 
 #[macro_use]
 extern crate diesel;
@@ -24,13 +14,10 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration, Local};
 use craftping::sync::ping;
 use craftping::{Error, Response};
-use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::{self};
 use diesel::MysqlConnection;
 
-use nitro_log::config::Config;
-use nitro_log::NitroLogger;
 
 use rand::seq::SliceRandom;
 use regex::Regex;
@@ -40,7 +27,7 @@ use rraw::me::Me;
 use serenity::client::bridge::gateway::GatewayIntents;
 use serenity::model::gateway::Activity;
 use serenity::model::guild::Member;
-use serenity::model::id::{ChannelId, EmojiId, GuildId};
+use serenity::model::id::{ChannelId, GuildId};
 use serenity::model::prelude::User;
 use serenity::{
     async_trait,
@@ -52,8 +39,8 @@ use serenity::{
     model::{channel::Message, gateway::Ready, id::UserId},
     prelude::*,
 };
-use serenity::{futures::future::BoxFuture, FutureExt};
 use std::net::TcpStream;
+
 use serenity::http::CacheHttp;
 use tokio::time::sleep;
 
@@ -62,7 +49,7 @@ use crate::site::Authenticator;
 // You can construct a hook without the use of a macro, too.
 // This requires some boilerplate though and the following additional import.
 use crate::utils::{
-    refresh_reddit_count, refresh_server_count, subreddit_info, user_info, Resources,
+    refresh_reddit_count, refresh_server_count, subreddit_info, user_info,
 };
 
 mod actions;
@@ -143,7 +130,7 @@ impl EventHandler for Handler {
                 m
             })
             .await;
-        refresh_server_count(&status).await;
+        refresh_server_count(&status).await.unwrap();
     }
     async fn guild_member_removal(
         &self,
@@ -171,7 +158,7 @@ impl EventHandler for Handler {
                 m
             })
             .await;
-        refresh_server_count(&status).await;
+        refresh_server_count(&status).await.unwrap();
     }
     async fn message(&self, ctx: Context, msg: Message) {
         let re = Regex::new("r/[A-Za-z0-9_-]+").unwrap();
@@ -184,10 +171,8 @@ impl EventHandler for Handler {
         if msg.channel_id.to_string().eq("829825560930156615") {
             return;
         }
-        if msg.author.id.to_string().eq("411465364103495680") {
-            if msg.content.contains("*") {
-                msg.react(&ctx.http, '🙄').await;
-            }
+        if msg.author.id.to_string().eq("411465364103495680") && msg.content.contains('*') {
+            msg.react(&ctx.http, '🙄').await;
         }
         if msg.is_own(ctx.cache).await {
             return;
@@ -212,11 +197,11 @@ impl EventHandler for Handler {
                 .await
                 .unwrap();
             loop {
-                refresh_reddit_count(status.clone(), &reddit).await;
+                refresh_reddit_count(status.clone(), &reddit).await.unwrap();
                 sleep(Duration::minutes(15).to_std().unwrap()).await;
             }
         })
-            .await;
+            .await.unwrap();
     }
 }
 
@@ -251,11 +236,6 @@ async fn unknown_command(_ctx: &Context, _msg: &Message, unknown_command_name: &
 }
 
 #[hook]
-async fn normal_message(_ctx: &Context, msg: &Message) {
-    println!("Message is not a command '{}'", msg.content);
-}
-
-#[hook]
 async fn delay_action(ctx: &Context, msg: &Message) {
     // You may want to handle a Discord rate limit if this fails.
     let _ = msg.react(ctx, '⏱').await;
@@ -264,39 +244,43 @@ async fn delay_action(ctx: &Context, msg: &Message) {
 #[hook]
 async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     match error {
-
         DispatchError::LackingPermissions(_) => {
-            if msg.author.id.eq(&UserId(487471903779586070)){
+            if msg.author.id.eq(&UserId(487471903779586070)) {
                 let x = ctx.http().get_emoji(msg.guild_id.unwrap().0, 941471475804807240).await.unwrap();
 
                 let string = format!("Listen. Tux Might like you. However, this does not give you special treatment with his little project here: {}", x);
-                msg.reply(&ctx.http,string).await;
+                msg.reply(&ctx.http, string).await;
             }
         }
         _ => {}
     }
 }
 
-fn _dispatch_error_no_macro<'fut>(
-    ctx: &'fut mut Context,
-    msg: &'fut Message,
-    error: DispatchError,
-) -> BoxFuture<'fut, ()> {
-    async move {
-        if let DispatchError::Ratelimited(info) = error {
-            if info.is_first_try {
-                let _ = msg
-                    .channel_id
-                    .say(
-                        &ctx.http,
-                        &format!("Try this again in {} seconds.", info.as_secs()),
-                    )
-                    .await;
-            }
-        };
+#[hook]
+async fn after(context: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
+    if let Err(error) = command_result {
+        msg.reply(&context.http, "Unable to Execute that command at this time").await;
+
+            let error_log = ChannelId(834210453265317900);
+
+        error_log
+            .send_message(&context.http, |m| {
+                m.embed(|e| {
+                    e.title(format!("An Error has occurred on Command {}", command_name));
+                    e.description(error.to_string());
+                    e.footer(|f| {
+                        f.text("Robotic Monarch");
+                        f
+                    });
+
+                    e
+                });
+                m
+            })
+            .await;
     }
-        .boxed()
 }
+
 embed_migrations!();
 #[tokio::main]
 async fn main() {
@@ -304,25 +288,6 @@ async fn main() {
         println!("Unable to load dotenv {}", error);
         return;
     }
-    let file = match std::env::var("MODE")
-        .unwrap_or("DEBUG".to_string())
-        .as_str()
-    {
-        "DEBUG" => "log-debug.json",
-        "RELEASE" => "log-release.json",
-        _ => {
-            panic!("Must be Release or Debug")
-        }
-    };
-    /*
-    let config: Config = serde_json::from_str(Resources::file_get_string(file).as_str()).unwrap();
-
-    let result = NitroLogger::load(config, None);
-    if let Err(error) = result {
-        println!("{}", error);
-       // return;
-    }
-    */
 
     let file_appender = tracing_appender::rolling::hourly("log/discord", "discord.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
@@ -339,6 +304,7 @@ async fn main() {
     let final_pool = Arc::new(pool);
     // Configure the client with your Discord bot token in the environment.
     let token = std::env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+    let application_id = std::env::var("APPLICATION_ID").expect("Expected a Application ID in the environment").parse::<u64>().expect("Application ID must be a u64");
 
     let framework = StandardFramework::new()
         .configure(|c| {
@@ -347,8 +313,8 @@ async fn main() {
                 .delimiters(vec![", ", ","])
         })
         .unrecognised_command(unknown_command)
-        .normal_message(normal_message)
         .on_dispatch_error(dispatch_error)
+        .after(after)
         .help(&MY_HELP)
         .group(&GENERAL_GROUP)
         .group(&moderator::MOD_GROUP)
@@ -358,6 +324,8 @@ async fn main() {
 
     let mut client = Client::builder(&token)
         .event_handler(Handler)
+        .application_id(application_id)
+
         .framework(framework)
         .intents(GatewayIntents::all())
         .await

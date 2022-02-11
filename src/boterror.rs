@@ -1,12 +1,12 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-use hyper;
+
 use hyper::StatusCode;
-use serde_json;
+
 use serenity::client::Context;
 use serenity::model::channel::Message;
-use serenity::model::id::ChannelId;
+
 use serenity::prelude::SerenityError;
 
 /// Error type that occurs when an API request fails for some reason.
@@ -49,23 +49,7 @@ impl BotError {
                 m
             })
             .await;
-        let error_log = ChannelId(834210453265317900);
 
-        error_log
-            .send_message(&context.http, |m| {
-                m.embed(|e| {
-                    e.title("An Error has occurred");
-                    e.description(self.to_string());
-                    e.footer(|f| {
-                        f.text("Robotic Monarch");
-                        f
-                    });
-
-                    e
-                });
-                m
-            })
-            .await;
     }
 }
 

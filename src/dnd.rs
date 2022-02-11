@@ -1,4 +1,4 @@
-use std::string::ToString;
+
 
 // A command can have sub-commands, just like in command lines tools.
 // Imagine `cargo help` and `cargo help run`.
@@ -11,10 +11,10 @@ use serenity::{
     prelude::*,
 };
 
-use crate::boterror::BotError;
-use crate::{actions, site, Bot, DataHolder, DbPool, DbPoolType};
 
-use serenity::model::gateway::Activity;
+
+
+
 use serenity::model::id::RoleId;
 
 #[group]
@@ -41,7 +41,7 @@ async fn add(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         let guild = msg.guild(&ctx.cache).await.unwrap();
         let mut member = guild.member(&ctx.http, x.id).await.unwrap();
         member.add_role(&ctx.http, 939176496709382205).await.unwrap();
-        msg.reply(&ctx.http, format!("Adding DND Role to {}", x.name)).await;
+        msg.reply(&ctx.http, format!("Adding DND Role to {}", x.name)).await?;
     }
     Ok(())
 }
@@ -58,7 +58,7 @@ async fn remove(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         if member.roles.contains(&RoleId(939176496709382205)){
             member.remove_role(&ctx.http, 939176496709382205).await.unwrap();
         }
-        msg.reply(&ctx.http, format!("Removing DND Role to {}", x.name)).await;
+        msg.reply(&ctx.http, format!("Removing DND Role to {}", x.name)).await?;
     }
     Ok(())
 }

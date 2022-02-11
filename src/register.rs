@@ -3,11 +3,9 @@
 use crate::boterror::BotError;
 use crate::models::User;
 use crate::{actions, Bot, DataHolder, DbPool, DbPoolType};
-use diesel::prelude::*;
 use diesel::MysqlConnection;
 
 use serde::{Deserialize, Serialize};
-use serenity::http::CacheHttp;
 use serenity::model::guild::Member;
 use serenity::model::id::RoleId;
 use serenity::prelude::*;
@@ -20,7 +18,6 @@ use serenity::{
 };
 
 use crate::site::site_client::SiteClient;
-use std::fmt::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[group]
@@ -38,7 +35,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let conn = pool.get()?;
     let value = is_registered(msg.author.id, &conn)?;
     if let Some(user) = value {
-        if msg
+        return if msg
             .author
             .has_role(&ctx.http, msg.guild_id.unwrap(), RoleId(830277916944236584))
             .await?
@@ -55,8 +52,8 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                     });
                     m
                 })
-                .await;
-            return Ok(());
+                .await?;
+            Ok(())
         } else {
             msg.channel_id
                 .send_message(&ctx.http, |m| {
@@ -70,17 +67,17 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                     });
                     m
                 })
-                .await;
+                .await?;
 
             register_user_discord(
-                &ctx,
+                ctx,
                 user.reddit_username.as_str(),
-                msg.member(&ctx.http).await.unwrap(),
+                msg.member(&ctx.http).await?,
             )
-                .await;
+                .await?;
 
-            return Ok(());
-        }
+            Ok(())
+        };
     }
 
     if option.is_none() {
@@ -96,7 +93,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 });
                 m
             })
-            .await;
+            .await?;
         return Ok(());
     }
 
@@ -119,13 +116,13 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 });
                 m
             })
-            .await;
+            .await?;
         return Ok(());
     }
     if user.is_err() {
         user.err()
             .unwrap()
-            .discord_message(msg, "Unable to verify Reddit Name.", &ctx)
+            .discord_message(msg, "Unable to verify Reddit Name.", ctx)
             .await;
         return Ok(());
     } else if !user.unwrap() {
@@ -142,31 +139,28 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 });
                 m
             })
-            .await;
+            .await?;
     } else {
         let id = msg
             .channel_id
             .to_channel(&ctx.http)
-            .await
-            .unwrap()
-            .guild()
+            .await?.guild()
             .unwrap()
             .guild_id
             .member(&ctx.http, &msg.author.id)
-            .await
-            .unwrap();
+            .await?;
         let result2 = register_user(&*username, &id, &conn);
         if result2.is_err() {
             result2
                 .err()
                 .unwrap()
-                .discord_message(&msg, "Unable to approve you", &ctx)
+                .discord_message(msg, "Unable to approve you", ctx)
                 .await;
             return Ok(());
         }
-        let result2 = register_user_discord(&ctx, &*username, id).await;
+        let result2 = register_user_discord(ctx, &*username, id).await;
         if result2.is_err() {
-            result2.err().unwrap().discord_message(&msg, "You were approved however,we were unable to add a Discord role. Please have a mod add it for you.", &ctx).await;
+            result2.err().unwrap().discord_message(msg, "You were approved however,we were unable to add a Discord role. Please have a mod add it for you.", ctx).await;
             return Ok(());
         }
         msg.channel_id
@@ -181,7 +175,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 });
                 m
             })
-            .await;
+            .await?;
     }
     Ok(())
 }
@@ -191,18 +185,16 @@ async fn register_user_discord(
     reddit_username: &str,
     mut member: Member,
 ) -> Result<(), BotError> {
-    let x = member
+    member
         .add_role(&context.http, RoleId(830277916944236584))
-        .await;
+        .await?;
     member
         .edit(&context.http, |e| {
-            e.nickname(reddit_username.clone().to_string())
+            e.nickname(reddit_username.to_string())
         })
-        .await;
-    if x.is_err() {
-        return Err(BotError::SerenityError(x.err().unwrap()));
-    }
-    return Ok(());
+        .await?;
+
+    Ok(())
 }
 
 fn register_user(
@@ -213,23 +205,23 @@ fn register_user(
     let user = User {
         uid: 0,
         discord_id: member.user.id.to_string(),
-        reddit_username: reddit_username.to_string().clone(),
+        reddit_username: reddit_username.to_string(),
         created: SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as i64,
     };
-    let result = actions::add_user(&user, &conn);
+    let result = actions::add_user(&user, conn);
     if result.is_err() {
         return Err(BotError::DBError(result.err().unwrap()));
     }
-    return Ok(());
+    Ok(())
 }
 
 async fn validate_user(p0: &str, site_client: &SiteClient) -> Result<bool, BotError> {
     let x = site_client.get_user(p0.parse().unwrap()).await?;
 
-    return Ok(x.is_some());
+    Ok(x.is_some())
 }
 
 fn is_registered(p0: UserId, connect: &MysqlConnection) -> Result<Option<User>, BotError> {
@@ -238,7 +230,7 @@ fn is_registered(p0: UserId, connect: &MysqlConnection) -> Result<Option<User>, 
         return Err(BotError::DBError(x.err().unwrap()));
     }
     let result = x.unwrap();
-    return Ok(result);
+    Ok(result)
 }
 
 fn is_registered_reddit(
@@ -251,7 +243,7 @@ fn is_registered_reddit(
     }
     let result = x.unwrap();
 
-    return Ok(result.is_some());
+    Ok(result.is_some())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

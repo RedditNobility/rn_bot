@@ -33,18 +33,17 @@ impl Resources {
     }
 }
 
-pub async fn refresh_server_count(status: &Context) {
+pub async fn refresh_server_count(status: &Context) -> Result<(), BotError> {
     let channel = ChannelId(830636660197687316);
     let server_size = channel
         .to_channel(&status.http)
         .await
-        .unwrap()
-        .guild()
+        ?.guild()
         .unwrap()
         .guild_id
         .members(&status.http, None, None)
         .await
-        .unwrap().into_iter().filter(|x| { !x.user.bot }).collect::<Vec<Member>>().len();
+        ?.into_iter().filter(|x| { !x.user.bot }).collect::<Vec<Member>>().len();
     channel
         .to_channel(&status.http)
         .await
@@ -52,7 +51,8 @@ pub async fn refresh_server_count(status: &Context) {
         .guild()
         .unwrap()
         .edit(&status.http, |c| c.name(format!("Server Size: {}", server_size)))
-        .await;
+        .await?;
+    Ok(())
 }
 
 pub async fn subreddit_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
@@ -176,10 +176,8 @@ pub async fn user_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
                                 } else if let Some(img) = user.icon_img {
                                     e.image(img);
                                 }
-                            } else {
-                                if let Some(img) = user.icon_img {
-                                    e.image(img);
-                                }
+                            } else if let Some(img) = user.icon_img {
+                                e.image(img);
                             }
                             e.footer(|f| {
                                 f.text("Robotic Monarch");
@@ -247,5 +245,5 @@ pub async fn refresh_reddit_count(status: Context, me: &Me) -> Result<(), BotErr
             c.name(format!("Reddit Subscribers: {}", count))
         })
         .await?;
-    return Ok(());
+    Ok(())
 }

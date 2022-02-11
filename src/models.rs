@@ -32,7 +32,7 @@ impl Event {
             eid: 0,
             name: new_event.name.clone(),
             description: new_event.description.clone(),
-            creator: new_event.creator.unwrap().clone(),
+            creator: new_event.creator.unwrap(),
             active: true,
             discord_channel: channel.0 as i64,
             end: None,
