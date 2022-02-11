@@ -7,12 +7,12 @@ use rust_embed::RustEmbed;
 use serenity::model::id::ChannelId;
 use serenity::{model::channel::Message, prelude::*};
 
+use crate::boterror::BotError;
 use hyper::StatusCode;
 use num_format::{Locale, ToFormattedString};
 use regex::Matches;
 use rraw::auth::AnonymousAuthenticator;
 use serenity::model::guild::Member;
-use crate::boterror::BotError;
 
 #[derive(RustEmbed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources"]
@@ -37,20 +37,25 @@ pub async fn refresh_server_count(status: &Context) -> Result<(), BotError> {
     let channel = ChannelId(830636660197687316);
     let server_size = channel
         .to_channel(&status.http)
-        .await
-        ?.guild()
+        .await?
+        .guild()
         .unwrap()
         .guild_id
         .members(&status.http, None, None)
-        .await
-        ?.into_iter().filter(|x| { !x.user.bot }).collect::<Vec<Member>>().len();
+        .await?
+        .into_iter()
+        .filter(|x| !x.user.bot)
+        .collect::<Vec<Member>>()
+        .len();
     channel
         .to_channel(&status.http)
         .await
         .unwrap()
         .guild()
         .unwrap()
-        .edit(&status.http, |c| c.name(format!("Server Size: {}", server_size)))
+        .edit(&status.http, |c| {
+            c.name(format!("Server Size: {}", server_size))
+        })
         .await?;
     Ok(())
 }
@@ -62,8 +67,8 @@ pub async fn subreddit_info(ctx: Context, matches: Matches<'_, '_>, msg: &Messag
             AnonymousAuthenticator::new(),
             "Reddit Nobility Bot u/KingTuxWH".to_string(),
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
         let subreddit = me.subreddit(text.clone());
         match subreddit.about().await {
             Ok(sub) => {
@@ -142,8 +147,8 @@ pub async fn user_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
             AnonymousAuthenticator::new(),
             "Reddit Nobility Bot u/KingTuxWH".to_string(),
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
         let user = me.user(text.clone());
         match user.about().await {
             Ok(user) => {
@@ -156,17 +161,23 @@ pub async fn user_info(ctx: Context, matches: Matches<'_, '_>, msg: &Message) {
                             e.url(format!("https://reddit.com/u/{}", user.name));
                             e.field(
                                 "Total Karma",
-                                user.total_karma.unwrap_or(0).to_formatted_string(&Locale::en),
+                                user.total_karma
+                                    .unwrap_or(0)
+                                    .to_formatted_string(&Locale::en),
                                 true,
                             );
                             e.field(
                                 "Comment Karma",
-                                user.comment_karma.unwrap_or(0).to_formatted_string(&Locale::en),
+                                user.comment_karma
+                                    .unwrap_or(0)
+                                    .to_formatted_string(&Locale::en),
                                 true,
                             );
                             e.field(
                                 "Link Karma",
-                                user.link_karma.unwrap_or(0).to_formatted_string(&Locale::en),
+                                user.link_karma
+                                    .unwrap_or(0)
+                                    .to_formatted_string(&Locale::en),
                                 true,
                             );
                             e.title(user.name);

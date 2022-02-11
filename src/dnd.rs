@@ -1,5 +1,3 @@
-
-
 // A command can have sub-commands, just like in command lines tools.
 // Imagine `cargo help` and `cargo help run`.
 use serenity::{
@@ -10,10 +8,6 @@ use serenity::{
     model::channel::Message,
     prelude::*,
 };
-
-
-
-
 
 use serenity::model::id::RoleId;
 
@@ -40,8 +34,12 @@ async fn add(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     for x in msg.mentions.iter() {
         let guild = msg.guild(&ctx.cache).await.unwrap();
         let mut member = guild.member(&ctx.http, x.id).await.unwrap();
-        member.add_role(&ctx.http, 939176496709382205).await.unwrap();
-        msg.reply(&ctx.http, format!("Adding DND Role to {}", x.name)).await?;
+        member
+            .add_role(&ctx.http, 939176496709382205)
+            .await
+            .unwrap();
+        msg.reply(&ctx.http, format!("Adding DND Role to {}", x.name))
+            .await?;
     }
     Ok(())
 }
@@ -55,10 +53,14 @@ async fn remove(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     for x in msg.mentions.iter() {
         let guild = msg.guild(&ctx.cache).await.unwrap();
         let mut member = guild.member(&ctx.http, x.id).await.unwrap();
-        if member.roles.contains(&RoleId(939176496709382205)){
-            member.remove_role(&ctx.http, 939176496709382205).await.unwrap();
+        if member.roles.contains(&RoleId(939176496709382205)) {
+            member
+                .remove_role(&ctx.http, 939176496709382205)
+                .await
+                .unwrap();
         }
-        msg.reply(&ctx.http, format!("Removing DND Role to {}", x.name)).await?;
+        msg.reply(&ctx.http, format!("Removing DND Role to {}", x.name))
+            .await?;
     }
     Ok(())
 }

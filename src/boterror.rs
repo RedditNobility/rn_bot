@@ -1,7 +1,6 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-
 use hyper::StatusCode;
 
 use serenity::client::Context;
@@ -49,7 +48,6 @@ impl BotError {
                 m
             })
             .await;
-
     }
 }
 
@@ -90,7 +88,8 @@ impl From<diesel::result::Error> for BotError {
     fn from(err: diesel::result::Error) -> BotError {
         BotError::DBError(err)
     }
-}impl From<SerenityError> for BotError {
+}
+impl From<SerenityError> for BotError {
     fn from(err: SerenityError) -> BotError {
         BotError::SerenityError(err)
     }
@@ -107,4 +106,3 @@ impl From<serde_json::Error> for BotError {
         BotError::JSONError(err)
     }
 }
-

@@ -74,7 +74,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 user.reddit_username.as_str(),
                 msg.member(&ctx.http).await?,
             )
-                .await?;
+            .await?;
 
             Ok(())
         };
@@ -96,7 +96,6 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             .await?;
         return Ok(());
     }
-
 
     let username = option.unwrap().replace("u/", "");
     let user = validate_user(&*username, &_x.site_client).await;
@@ -144,7 +143,8 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         let id = msg
             .channel_id
             .to_channel(&ctx.http)
-            .await?.guild()
+            .await?
+            .guild()
             .unwrap()
             .guild_id
             .member(&ctx.http, &msg.author.id)
@@ -189,9 +189,7 @@ async fn register_user_discord(
         .add_role(&context.http, RoleId(830277916944236584))
         .await?;
     member
-        .edit(&context.http, |e| {
-            e.nickname(reddit_username.to_string())
-        })
+        .edit(&context.http, |e| e.nickname(reddit_username.to_string()))
         .await?;
 
     Ok(())

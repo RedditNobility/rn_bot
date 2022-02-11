@@ -25,7 +25,6 @@ pub struct AuthToken {
     pub created: i64,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserProperties {
     pub avatar: Option<String>,

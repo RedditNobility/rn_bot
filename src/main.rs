@@ -1,4 +1,3 @@
-
 #[macro_use]
 extern crate diesel;
 #[macro_use]
@@ -17,7 +16,6 @@ use craftping::{Error, Response};
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::{self};
 use diesel::MysqlConnection;
-
 
 use rand::seq::SliceRandom;
 use regex::Regex;
@@ -48,13 +46,12 @@ use crate::site::site_client::SiteClient;
 use crate::site::Authenticator;
 // You can construct a hook without the use of a macro, too.
 // This requires some boilerplate though and the following additional import.
-use crate::utils::{
-    refresh_reddit_count, refresh_server_count, subreddit_info, user_info,
-};
+use crate::utils::{refresh_reddit_count, refresh_server_count, subreddit_info, user_info};
 
 mod actions;
 mod admin;
 mod boterror;
+mod dnd;
 mod event;
 mod models;
 mod moderator;
@@ -62,7 +59,6 @@ mod register;
 mod schema;
 pub mod site;
 mod utils;
-mod dnd;
 
 type DbPoolType = Arc<r2d2::Pool<ConnectionManager<MysqlConnection>>>;
 
@@ -194,14 +190,15 @@ impl EventHandler for Handler {
                 arc,
                 "RedditNobility Discord bot(by u/KingTuxWH)".to_string(),
             )
-                .await
-                .unwrap();
+            .await
+            .unwrap();
             loop {
                 refresh_reddit_count(status.clone(), &reddit).await.unwrap();
                 sleep(Duration::minutes(15).to_std().unwrap()).await;
             }
         })
-            .await.unwrap();
+        .await
+        .unwrap();
     }
 }
 
@@ -246,7 +243,11 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     match error {
         DispatchError::LackingPermissions(_) => {
             if msg.author.id.eq(&UserId(487471903779586070)) {
-                let x = ctx.http().get_emoji(msg.guild_id.unwrap().0, 941471475804807240).await.unwrap();
+                let x = ctx
+                    .http()
+                    .get_emoji(msg.guild_id.unwrap().0, 941471475804807240)
+                    .await
+                    .unwrap();
 
                 let string = format!("Listen. Tux Might like you. However, this does not give you special treatment with his little project here: {}", x);
                 msg.reply(&ctx.http, string).await;
@@ -257,11 +258,17 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
 }
 
 #[hook]
-async fn after(context: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
+async fn after(
+    context: &Context,
+    msg: &Message,
+    command_name: &str,
+    command_result: CommandResult,
+) {
     if let Err(error) = command_result {
-        msg.reply(&context.http, "Unable to Execute that command at this time").await;
+        msg.reply(&context.http, "Unable to Execute that command at this time")
+            .await;
 
-            let error_log = ChannelId(834210453265317900);
+        let error_log = ChannelId(834210453265317900);
 
         error_log
             .send_message(&context.http, |m| {
@@ -293,7 +300,6 @@ async fn main() {
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt().with_writer(non_blocking).init();
 
-
     let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL");
     let manager = ConnectionManager::<MysqlConnection>::new(connspec);
     let pool = r2d2::Pool::builder()
@@ -304,7 +310,10 @@ async fn main() {
     let final_pool = Arc::new(pool);
     // Configure the client with your Discord bot token in the environment.
     let token = std::env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
-    let application_id = std::env::var("APPLICATION_ID").expect("Expected a Application ID in the environment").parse::<u64>().expect("Application ID must be a u64");
+    let application_id = std::env::var("APPLICATION_ID")
+        .expect("Expected a Application ID in the environment")
+        .parse::<u64>()
+        .expect("Application ID must be a u64");
 
     let framework = StandardFramework::new()
         .configure(|c| {
@@ -325,7 +334,6 @@ async fn main() {
     let mut client = Client::builder(&token)
         .event_handler(Handler)
         .application_id(application_id)
-
         .framework(framework)
         .intents(GatewayIntents::all())
         .await
