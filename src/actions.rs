@@ -43,7 +43,7 @@ pub fn add_user(user: &User, conn: &MysqlConnection) -> Result<(), diesel::resul
 
     Ok(())
 }
-
+#[allow(dead_code)]
 pub fn get_active_event(
     conn: &MysqlConnection,
 ) -> Result<Option<models::Event>, diesel::result::Error> {
@@ -56,7 +56,7 @@ pub fn get_active_event(
 
     Ok(found)
 }
-
+#[allow(dead_code)]
 pub fn end_event(event: i64, conn: &MysqlConnection) -> Result<(), diesel::result::Error> {
     use crate::schema::events::dsl::*;
 

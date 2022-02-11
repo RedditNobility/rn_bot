@@ -20,6 +20,7 @@ use rraw::auth::AnonymousAuthenticator;
 pub struct Resources;
 
 impl Resources {
+    #[allow(dead_code)]
     pub fn file_get(file: &str) -> Vec<u8> {
         let buf = Path::new("resources").join(file);
         if buf.exists() {
@@ -28,6 +29,7 @@ impl Resources {
             Resources::get(file).unwrap().data.to_vec()
         }
     }
+    #[allow(dead_code)]
     pub fn file_get_string(file: &str) -> String {
         let vec = Resources::file_get(file);
         String::from_utf8(vec).unwrap()
