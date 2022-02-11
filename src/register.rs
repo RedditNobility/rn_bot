@@ -1,6 +1,6 @@
 // A command can have sub-commands, just like in command lines tools.
 // Imagine `cargo help` and `cargo help run`.
-use crate::boterror::BotError;
+use crate::bot_error::BotError;
 use crate::models::User;
 use crate::{actions, Bot, DataHolder, DbPool, DbPoolType};
 use diesel::MysqlConnection;

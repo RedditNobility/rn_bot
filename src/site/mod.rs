@@ -1,14 +1,13 @@
 use hyper::{Body, Method, Request};
 
-use crate::boterror::BotError;
-use hyper::header::{HeaderName, AUTHORIZATION, CONTENT_TYPE, USER_AGENT};
+use crate::bot_error::BotError;
+use hyper::header::{ CONTENT_TYPE, USER_AGENT};
 
 use crate::site::api_response::APIResponse;
 use crate::site::model::AuthToken;
 use crate::site::site_client::SiteClient;
 use serde::Serialize;
 use std::borrow::Borrow;
-use std::collections::HashMap;
 use std::option::Option::Some;
 pub mod api_response;
 pub mod model;
@@ -68,20 +67,5 @@ impl Authenticator {
         }
     }
 
-    fn scopes(&self) -> Vec<String> {
-        vec![String::from("*")]
-    }
 
-    fn headers(&self) -> HashMap<HeaderName, String> {
-        let mut map = HashMap::new();
-        map.insert(
-            AUTHORIZATION,
-            format!("Bearer {}", self.token.as_ref().unwrap().clone()),
-        );
-        map
-    }
-
-    fn oauth(&self) -> bool {
-        true
-    }
 }

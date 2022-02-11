@@ -11,7 +11,7 @@ use serenity::{
     prelude::*,
 };
 
-use crate::boterror::BotError;
+use crate::bot_error::BotError;
 use crate::{actions, site, Bot, DataHolder, DbPool, DbPoolType};
 
 use serenity::model::gateway::Activity;

@@ -1,4 +1,4 @@
-use crate::boterror::BotError;
+use crate::bot_error::BotError;
 use crate::site::api_response::APIResponse;
 use crate::site::Authenticator;
 use hyper::client::HttpConnector;

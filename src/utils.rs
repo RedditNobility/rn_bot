@@ -1,13 +1,15 @@
 use rraw::me::Me;
-use std::fs::read;
+use std::fs::{File, read};
+use std::io::{BufRead, BufReader};
 use std::path::Path;
+use chrono::Duration;
 
 use rraw::utils::error::APIError;
 use rust_embed::RustEmbed;
 use serenity::model::id::ChannelId;
 use serenity::{model::channel::Message, prelude::*};
 
-use crate::boterror::BotError;
+use crate::bot_error::BotError;
 use hyper::StatusCode;
 use num_format::{Locale, ToFormattedString};
 use regex::Matches;
@@ -257,4 +259,37 @@ pub async fn refresh_reddit_count(status: Context, me: &Me) -> Result<(), BotErr
         })
         .await?;
     Ok(())
+}
+
+
+pub trait DurationFormat {
+    fn format(&self) -> String;
+}
+
+impl DurationFormat for Duration {
+    fn format(&self) -> String {
+        let days = self.num_days();
+        let hours = self.num_hours() - (days * 24);
+        let minutes = self.num_minutes() - (self.num_hours() * 60);
+        let seconds = self.num_seconds() - (self.num_minutes() * 60);
+        if days > 0 {
+            return format!(
+                "{} days {} hours {} minutes {} seconds",
+                days, hours, minutes, seconds
+            );
+        } else if hours > 0 {
+            return format!("{} hours {} minutes {} seconds", hours, minutes, seconds);
+        } else if minutes > 0 {
+            return format!(" {} minutes {} seconds", minutes, seconds);
+        }
+        return format!("{} seconds", seconds);
+    }
+}
+
+pub fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
+    let file = File::open(filename).expect("no such file");
+    let buf = BufReader::new(file);
+    buf.lines()
+        .map(|l| l.expect("Could not parse line"))
+        .collect()
 }

@@ -4,61 +4,51 @@ extern crate diesel;
 extern crate diesel_migrations;
 
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::ops::Sub;
-use std::path::Path;
 use std::sync::Arc;
 
-use chrono::{DateTime, Duration, Local};
-use craftping::sync::ping;
-use craftping::{Error, Response};
+use chrono::{DateTime, Local};
+
+
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::{self};
 use diesel::MysqlConnection;
 
-use rand::seq::SliceRandom;
-use regex::Regex;
-use rraw::auth::PasswordAuthenticator;
-use rraw::me::Me;
-
 use serenity::client::bridge::gateway::GatewayIntents;
-use serenity::model::gateway::Activity;
-use serenity::model::guild::Member;
-use serenity::model::id::{ChannelId, GuildId};
-use serenity::model::prelude::User;
+
+use serenity::model::id::ChannelId;
+
 use serenity::{
-    async_trait,
     framework::standard::{
         help_commands,
         macros::{command, group, help, hook},
         Args, CommandGroup, CommandResult, DispatchError, HelpOptions, StandardFramework,
     },
-    model::{channel::Message, gateway::Ready, id::UserId},
+    model::{channel::Message, id::UserId},
     prelude::*,
 };
-use std::net::TcpStream;
 
 use serenity::http::CacheHttp;
-use tokio::time::sleep;
 
 use crate::site::site_client::SiteClient;
 use crate::site::Authenticator;
+use crate::utils::DurationFormat;
 // You can construct a hook without the use of a macro, too.
 // This requires some boilerplate though and the following additional import.
-use crate::utils::{refresh_reddit_count, refresh_server_count, subreddit_info, user_info};
 
 mod actions;
 mod admin;
-mod boterror;
+mod bot_error;
 mod dnd;
 mod event;
+mod handler;
 mod models;
 mod moderator;
 mod register;
 mod schema;
 pub mod site;
 mod utils;
+mod minecraft;
 
 type DbPoolType = Arc<r2d2::Pool<ConnectionManager<MysqlConnection>>>;
 
@@ -72,9 +62,7 @@ impl TypeMapKey for DbPool {
 pub struct DataHolder {}
 
 impl DataHolder {
-    fn new() -> DataHolder {
-        DataHolder {}
-    }
+
 }
 
 pub struct Bot {
@@ -101,107 +89,8 @@ impl TypeMapKey for DataHolder {
 
 impl Bot {}
 
-struct Handler;
-
-#[async_trait]
-impl EventHandler for Handler {
-    async fn guild_member_addition(&self, status: Context, _guild: GuildId, member: Member) {
-        println!("Test");
-        let channel = ChannelId(830415533673414696);
-        let file = lines_from_file(Path::new("resources").join("welcome-jokes"));
-
-        let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
-        let _msg = channel
-            .send_message(&status.http, |m| {
-                m.embed(|e| {
-                    e.title(format!("Welcome {}", member.user.name.clone()));
-                    e.description(option.replace("{name}", &*member.user.name.clone()));
-                    e.footer(|f| {
-                        f.text("Robotic Monarch");
-                        f
-                    });
-
-                    e
-                });
-                m
-            })
-            .await;
-        refresh_server_count(&status).await.unwrap();
-    }
-    async fn guild_member_removal(
-        &self,
-        status: Context,
-        _guild: GuildId,
-        _new: User,
-        _old_if_available: Option<Member>,
-    ) {
-        let channel = ChannelId(840919470695645184);
-        let file = lines_from_file(Path::new("resources").join("exit-messages"));
-
-        let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
-        let _msg = channel
-            .send_message(&status.http, |m| {
-                m.embed(|e| {
-                    e.title(format!("Goodbye {}", _new.name.clone()));
-                    e.description(option.replace("{name}", &*_new.name.clone()));
-                    e.footer(|f| {
-                        f.text("Robotic Monarch");
-                        f
-                    });
-
-                    e
-                });
-                m
-            })
-            .await;
-        refresh_server_count(&status).await.unwrap();
-    }
-    async fn message(&self, ctx: Context, msg: Message) {
-        if msg.channel_id.to_string().eq("829825560930156615") {
-            return;
-        }
-        if msg.is_own(&ctx.cache).await {
-            return;
-        }
-
-        let re = Regex::new("r/[A-Za-z0-9_-]+").unwrap();
-        let option = re.find_iter(msg.content.as_str());
-        subreddit_info(&ctx, option, &msg).await;
-
-        let user_re = Regex::new("u/[A-Za-z0-9_-]+").unwrap();
-        let option = user_re.find_iter(msg.content.as_str());
-        user_info(&ctx, option, &msg).await;
-    }
-    async fn ready(&self, status: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
-        status.online().await;
-        status.set_activity(Activity::playing("A coup!")).await;
-
-        tokio::spawn(async move {
-            let arc = PasswordAuthenticator::new(
-                std::env::var("CLIENT_KEY").unwrap().as_str(),
-                std::env::var("CLIENT_SECRET").unwrap().as_str(),
-                std::env::var("REDDIT_USER").unwrap().as_str(),
-                std::env::var("PASSWORD").unwrap().as_str(),
-            );
-            let reddit = Me::login(
-                arc,
-                "RedditNobility Discord bot(by u/KingTuxWH)".to_string(),
-            )
-                .await
-                .unwrap();
-            loop {
-                refresh_reddit_count(status.clone(), &reddit).await.unwrap();
-                sleep(Duration::minutes(15).to_std().unwrap()).await;
-            }
-        })
-            .await
-            .unwrap();
-    }
-}
-
 #[group]
-#[commands(about, serverinfo, minecraft, botinfo)]
+#[commands(about, serverinfo, botinfo)]
 struct General;
 
 #[help]
@@ -252,22 +141,34 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
                 let string = format!("Listen. Tux Might like you. However, this does not give you special treatment with his little project here: {}", x);
                 msg.reply(&ctx.http, string).await.unwrap();
             }
-            format!("User {} is missing permission: {}", msg.author.name, permission)
+            format!(
+                "User {} is missing permission: {}",
+                msg.author.name, permission
+            )
         }
         DispatchError::OnlyForOwners => {
-            format!("User {} has executed a command that is for Owners", msg.author.name)
+            format!(
+                "User {} has executed a command that is for Owners",
+                msg.author.name
+            )
         }
         DispatchError::LackingRole => {
-            format!("User {} has executed a command that is for a specific role.", msg.author.name)
+            format!(
+                "User {} has executed a command that is for a specific role.",
+                msg.author.name
+            )
         }
         value => {
-            format!("User {} has executed incorrectly. In Some way: {:?}", msg.author.name, value)
+            format!(
+                "User {} has executed incorrectly. In Some way: {:?}",
+                msg.author.name, value
+            )
         }
     };
     error_log
         .send_message(&ctx.http, |m| {
             m.embed(|e| {
-                e.title(format!("Dispatch Error"));
+                e.title("Dispatch Error");
                 e.description(error_message);
                 e.footer(|f| {
                     f.text("Robotic Monarch");
@@ -278,7 +179,8 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
             });
             m
         })
-        .await.unwrap();
+        .await
+        .unwrap();
 }
 
 #[hook]
@@ -290,7 +192,8 @@ async fn after(
 ) {
     if let Err(error) = command_result {
         msg.reply(&context.http, "Unable to Execute that command at this time")
-            .await;
+            .await
+            .unwrap();
 
         let error_log = ChannelId(834210453265317900);
 
@@ -308,7 +211,8 @@ async fn after(
                 });
                 m
             })
-            .await;
+            .await
+            .unwrap();
     }
 }
 
@@ -330,7 +234,7 @@ async fn main() {
         .build(manager)
         .expect("Failed to create pool.");
     let connection = pool.get().unwrap();
-    embedded_migrations::run_with_output(&connection, &mut std::io::stdout());
+    embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
     let final_pool = Arc::new(pool);
     // Configure the client with your Discord bot token in the environment.
     let token = std::env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
@@ -342,7 +246,7 @@ async fn main() {
     let framework = StandardFramework::new()
         .configure(|c| {
             c.with_whitespace(true)
-                .prefix(&*std::env::var("COMMAND").unwrap_or("!".to_string()))
+                .prefix(&*std::env::var("COMMAND").expect("Missing Command Prefix!"))
                 .delimiters(vec![", ", ","])
         })
         .unrecognised_command(unknown_command)
@@ -353,10 +257,11 @@ async fn main() {
         .group(&moderator::MOD_GROUP)
         .group(&dnd::DND_GROUP)
         .group(&admin::ADMIN_GROUP)
+        .group(&minecraft::MINECRAFT_GROUP)
         .group(&register::REGISTER_GROUP);
 
     let mut client = Client::builder(&token)
-        .event_handler(Handler)
+        .event_handler(handler::Handler)
         .application_id(application_id)
         .framework(framework)
         .intents(GatewayIntents::all())
@@ -446,125 +351,3 @@ async fn botinfo(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
-pub trait DurationFormat {
-    fn format(&self) -> String;
-}
-
-impl DurationFormat for Duration {
-    fn format(&self) -> String {
-        let days = self.num_days();
-        let hours = self.num_hours() - (days * 24);
-        let minutes = self.num_minutes() - (self.num_hours() * 60);
-        let seconds = self.num_seconds() - (self.num_minutes() * 60);
-        if days > 0 {
-            return format!(
-                "{} days {} hours {} minutes {} seconds",
-                days, hours, minutes, seconds
-            );
-        } else if hours > 0 {
-            return format!("{} hours {} minutes {} seconds", hours, minutes, seconds);
-        } else if minutes > 0 {
-            return format!(" {} minutes {} seconds", minutes, seconds);
-        }
-        return format!("{} seconds", seconds);
-    }
-}
-
-fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
-    let file = File::open(filename).expect("no such file");
-    let buf = BufReader::new(file);
-    buf.lines()
-        .map(|l| l.expect("Could not parse line"))
-        .collect()
-}
-
-#[command]
-#[sub_commands(vanilla, modded)]
-async fn minecraft(ctx: &Context, msg: &Message) -> CommandResult {
-    let _msg = msg
-        .channel_id
-        .send_message(&ctx.http, |m| {
-            m.reference_message(msg);
-            m.embed(|e| {
-                e.title("RedditNobility Minecraft Server Info");
-                e.field("Available Options", "vanilla or modded", true);
-                e.footer(|f| {
-                    f.text("Robotic Monarch");
-                    f
-                });
-
-                e
-            });
-            m
-        })
-        .await;
-
-    Ok(())
-}
-
-#[command]
-#[aliases("van")]
-#[description("Gets information about the Vanilla MC Server")]
-async fn vanilla(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let hostname = "play.redditnobility.org";
-    let port = 25565;
-    let mut stream = TcpStream::connect((hostname, port)).unwrap();
-    let pong: Result<Response, Error> = ping(&mut stream, hostname, port);
-    let _msg = msg.channel_id.send_message(&ctx.http, |m| {
-        m.reference_message(msg);
-        m.embed(|e| {
-            e.title("RedditNobility Minecraft Vanilla Server Info");
-            e.field("IP", hostname, true);
-            e.field("Online", pong.is_ok(), true);
-            if pong.is_ok() {
-                let response = pong.unwrap();
-                e.field("Minecraft Version", response.version.replace("TuxServer ", ""), true);
-                e.field("Online Players", response.online_players, true);
-            }
-            e.field("Description", "An open vanilla survival game. Open to all nobility and even friend(Just message KingTuxWH or Darth_Dan).", false);
-            e.footer(|f| {
-                f.text("Robotic Monarch");
-                f
-            });
-
-            e
-        });
-        m
-    }).await;
-    Ok(())
-}
-
-#[command]
-#[aliases("mod")]
-#[description("Gets information about the modded MC Server")]
-async fn modded(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let hostname = "46.105.77.36";
-    let port = 25579;
-    let mut stream = TcpStream::connect((hostname, port)).unwrap();
-    let pong: Result<Response, Error> = ping(&mut stream, hostname, port);
-    let _msg = msg
-        .channel_id
-        .send_message(&ctx.http, |m| {
-            m.reference_message(msg);
-            m.embed(|e| {
-                e.title("RedditNobility Minecraft Modded Server Info");
-                e.field("IP", "play.mod.redditnobility.org", true);
-                e.field("Online", pong.is_ok(), true);
-                if pong.is_ok() {
-                    let response = pong.unwrap();
-                    e.field("Minecraft Version", response.version, true);
-                    e.field("Online Players", response.online_players, true);
-                }
-                e.field("Description", "A modded Minecraft server.", false);
-                e.footer(|f| {
-                    f.text("Robotic Monarch");
-                    f
-                });
-
-                e
-            });
-            m
-        })
-        .await;
-    Ok(())
-}
