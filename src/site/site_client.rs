@@ -70,21 +70,8 @@ impl SiteClient {
         ))
     }
     pub async fn get_user(&self, username: String) -> Result<Option<User>, BotError> {
-        println!("HEY");
-        let x = self.get_json(format!("moderator/user/{}", username)).await;
-        if let Ok(value) = x {
-            let result: Result<APIResponse<User>, serde_json::Error> =
-                serde_json::from_str(&*value);
-            if let Ok(response) = result {
-                return Ok(response.data);
-            } else if let Err(error) = result {
-                return Err(BotError::JSONError(error));
-            }
-        } else if let Err(error) = x {
-            return Err(error);
-        }
-        Err(BotError::Other(
-            "I am extremely curious how we got here".to_string(),
-        ))
+        let value = self.get_json(format!("moderator/user/{}", username)).await?;
+        let result: APIResponse<User> = serde_json::from_str(&*value)?;
+        Ok(result.data)
     }
 }
