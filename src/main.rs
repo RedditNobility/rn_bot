@@ -286,15 +286,20 @@ async fn main() {
 
 #[command]
 async fn about(ctx: &Context, msg: &Message) -> CommandResult {
+    let commit_hash = env!("VERGEN_GIT_SHA");
+    let branch = env!("VERGEN_GIT_BRANCH");
+    let timestamp = env!("VERGEN_BUILD_TIMESTAMP");
     msg
         .channel_id
         .send_message(&ctx.http, |m| {
             m.reference_message(msg);
             m.embed(|e| {
                 e.title("Bot About Info");
-                e.field("Head Developer", "KingTux#0042", true);
+                e.field("Head Developer", "KingTux#0042", false);
+                e.field("Branch", branch, true);
+                e.field("timestamp", timestamp, true);
                 e.description("The Custom Discord Bot for the Reddit Nobility Community");
-                e.url("https://github.com/RedditNobility/rn_bot");
+                e.url(format!("https://github.com/RedditNobility/rn_bot/commit/{}",commit_hash));
                 e.footer(|f| {
                     f.text("Robotic Monarch");
                     f
