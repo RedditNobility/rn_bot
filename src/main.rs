@@ -61,9 +61,7 @@ impl TypeMapKey for DbPool {
 // 0.7.2
 pub struct DataHolder {}
 
-impl DataHolder {
-
-}
+impl DataHolder {}
 
 pub struct Bot {
     pub start_time: DateTime<Local>,
@@ -288,10 +286,25 @@ async fn main() {
 
 #[command]
 async fn about(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id
-        .say(&ctx.http, "This is a small test-bot! : )")
-        .await?;
+    msg
+        .channel_id
+        .send_message(&ctx.http, |m| {
+            m.reference_message(msg);
+            m.embed(|e| {
+                e.title("Bot About Info");
+                e.field("Head Developer", "KingTux#0042", true);
+                e.description("The Custom Discord Bot for the Reddit Nobility Community");
+                e.url("https://github.com/RedditNobility/rn_bot");
+                e.footer(|f| {
+                    f.text("Robotic Monarch");
+                    f
+                });
 
+                e
+            });
+            m
+        })
+        .await?;
     Ok(())
 }
 
