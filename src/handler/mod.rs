@@ -1,4 +1,3 @@
-use std::path::Path;
 
 use chrono::Duration;
 
@@ -21,16 +20,15 @@ use tokio::time::sleep;
 
 // You can construct a hook without the use of a macro, too.
 // This requires some boilerplate though and the following additional import.
-use crate::utils::{lines_from_file, refresh_reddit_count, refresh_server_count, subreddit_info, user_info};
+use crate::utils::{refresh_reddit_count, refresh_server_count, Resources, subreddit_info, user_info};
 
 pub struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn guild_member_addition(&self, status: Context, _guild: GuildId, member: Member) {
-        println!("Test");
         let channel = ChannelId(830415533673414696);
-        let file = lines_from_file(Path::new("resources").join("welcome-jokes"));
+        let file = Resources::lines_from_resource("welcome-jokes");
 
         let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
         let _msg = channel
@@ -58,7 +56,7 @@ impl EventHandler for Handler {
         _old_if_available: Option<Member>,
     ) {
         let channel = ChannelId(840919470695645184);
-        let file = lines_from_file(Path::new("resources").join("exit-messages"));
+        let file = Resources::lines_from_resource("exit-messages");
 
         let option: &String = file.choose(&mut rand::thread_rng()).unwrap();
         let _msg = channel

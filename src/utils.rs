@@ -34,6 +34,10 @@ impl Resources {
         let vec = Resources::file_get(file);
         String::from_utf8(vec).unwrap()
     }
+    pub fn lines_from_resource(filename: &str) -> Vec<String> {
+        let string = Resources::file_get_string(filename);
+        string.lines().map(|l|l.to_string()).collect()
+    }
 }
 
 pub async fn refresh_server_count(status: &Context) -> Result<(), BotError> {
@@ -284,12 +288,4 @@ impl DurationFormat for Duration {
         }
         return format!("{} seconds", seconds);
     }
-}
-
-pub fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
-    let file = File::open(filename).expect("no such file");
-    let buf = BufReader::new(file);
-    buf.lines()
-        .map(|l| l.expect("Could not parse line"))
-        .collect()
 }
