@@ -97,7 +97,7 @@ async fn register(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
 
     let username = option.unwrap().replace("u/", "");
-    let user = validate_user(&*username, &_x.site_client).await?;
+    let user = validate_user(&username, &_x.site_client).await?;
     let result1 = is_registered_reddit(username.clone(), &conn)?;
 
     if result1 {
@@ -199,8 +199,8 @@ fn register_user(
     Ok(())
 }
 
-async fn validate_user(p0: &str, site_client: &SiteClient) -> Result<bool, BotError> {
-    let x = site_client.get_user(p0.parse().unwrap()).await?;
+async fn validate_user(username: &str, site_client: &SiteClient) -> Result<bool, BotError> {
+    let x = site_client.get_user(username).await?;
 
     Ok(x.is_some())
 }

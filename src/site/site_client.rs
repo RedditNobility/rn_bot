@@ -59,7 +59,7 @@ impl SiteClient {
         let string = String::from_utf8(value.to_vec()).unwrap();
         Ok(string)
     }
-    pub async fn get_user(&self, username: String) -> Result<Option<User>, BotError> {
+    pub async fn get_user(&self, username: &str) -> Result<Option<User>, BotError> {
         let value = self.get_json(format!("moderator/user/{}", username)).await?;
         let result: APIResponse<User> = serde_json::from_str(&*value)?;
         Ok(result.data)

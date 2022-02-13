@@ -168,8 +168,9 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     error_log
         .send_message(&ctx.http, |m| {
             m.embed(|e| {
-                e.title("Dispatch Error");
+                e.title(format!("Dispatch Error in command {}", &msg.content));
                 e.description(error_message);
+                e.url(msg.link());
                 e.footer(|f| {
                     f.text("Robotic Monarch");
                     f

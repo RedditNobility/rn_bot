@@ -39,9 +39,10 @@ async fn mod_info(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             msg.reply_ping(&ctx.http, "user is not registered").await?;
             return Ok(());
         }
+        let user1 = x.unwrap();
         let reddit_user = bot
             .site_client
-            .get_user(x.unwrap().reddit_username)
+            .get_user(&user1.reddit_username)
             .await?;
         if reddit_user.is_none() {
             msg.reply_ping(&ctx.http, "I am going to need a beer for this one")
