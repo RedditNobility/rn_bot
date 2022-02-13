@@ -16,7 +16,6 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.58.0
     steps:
       - uses: actions/checkout@v2
       - name: Install toolchain
@@ -24,6 +23,8 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
           override: true
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1.3.0
       - name: Run cargo Build
         uses: actions-rs/cargo@v1
         with:
@@ -37,6 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1.3.0
       - run: rustup component add clippy
       - uses: actions-rs/clippy-check@v1
         with:
