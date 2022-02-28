@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::fs::{create_dir, OpenOptions, read_to_string};
 use std::io::Write;
 use std::ops::Sub;
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use std::sync::Arc;
 
 use chrono::{DateTime, Local};
@@ -311,7 +311,7 @@ async fn main() {
             file.write_all(result.as_bytes()).unwrap();
             value
         } else {
-            let value = read_to_string(&roles_file).unwrap();
+            let value = read_to_string(&channels_file).unwrap();
             toml::from_str(&value).unwrap()
         };
         let mut data = client.data.write().await;
