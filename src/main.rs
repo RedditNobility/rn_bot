@@ -3,7 +3,7 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::{create_dir, OpenOptions, read_to_string};
 use std::io::Write;
 use std::ops::Sub;
@@ -16,6 +16,7 @@ use chrono::{DateTime, Local};
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::{self};
 use diesel::MysqlConnection;
+use serde::Deserialize;
 
 use serenity::client::bridge::gateway::GatewayIntents;
 
@@ -74,6 +75,7 @@ pub struct Bot {
     pub site_client: SiteClient,
     pub channels: Channels,
     pub roles: Roles,
+    pub active_data: HashMap<u64, String>,
 }
 
 impl Bot {
@@ -83,6 +85,7 @@ impl Bot {
             site_client,
             channels,
             roles,
+            active_data: Default::default()
         }
     }
 
@@ -267,6 +270,7 @@ async fn main() {
         .group(&dnd::DND_GROUP)
         .group(&admin::ADMIN_GROUP)
         .group(&minecraft::MINECRAFT_GROUP)
+        .group(&team::TEAM_GROUP)
         .group(&register::REGISTER_GROUP);
 
     let mut client = Client::builder(&token)
