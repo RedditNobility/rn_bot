@@ -53,6 +53,7 @@ async fn mod_team(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         let option = map.remove(&referenced.id.0);
         if option.is_none() {
             msg.reply(&ctx.http, "Please Reference the Creation Message").await?;
+            return Ok(())
         }
         let message_data = option.unwrap();
         //delete Old Value
@@ -89,11 +90,15 @@ async fn mteam_add(ctx: &Context, msg: &Message) -> CommandResult {
 
     if let Some(referenced) = &msg.referenced_message {
         let option = map.remove(&referenced.id.0);
-
+        if option.is_none() {
+            msg.reply(&ctx.http, "Please Reference the Creation Message").await?;
+            return Ok(());
+        }
         let message_data = option.unwrap();
         let message_data: TeamCreation = serde_json::from_str(&message_data)?;
         if message_data.id.is_none() || message_data.role.is_none() || message_data.name.is_none() {
-            //TODO resend creation message
+            teams_message(ctx, msg, message_data, map).await?;
+            return Ok(());
         }
         let team = TeamObject {
             role: message_data.role.unwrap().0,
@@ -134,7 +139,7 @@ pub async fn teams_message(ctx: &Context, msg: &Message, creation: TeamCreation,
             m.reference_message(msg);
             m.embed(|e| {
                 e.title(header);
-                e.field("Role", creation.role.unwrap_or( RoleId(0)), false);
+                e.field("Role", creation.role.unwrap_or(RoleId(0)), false);
                 e.field("Name", creation.name.unwrap_or_else(|| "null".to_string()), false);
                 e.field("id", creation.id.unwrap_or_else(|| "null".to_string()), false);
                 e.footer(|f| {
@@ -162,7 +167,7 @@ pub fn get_teams() -> Result<Vec<TeamObject>, BotError> {
         value
     } else {
         let value = read_to_string(&teams_path).unwrap();
-        toml::from_str(&value).unwrap()
+        serde_json::from_str(&value).unwrap()
     };
     Ok(teams)
 }
