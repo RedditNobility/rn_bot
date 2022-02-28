@@ -49,6 +49,7 @@ mod schema;
 pub mod site;
 mod utils;
 mod minecraft;
+pub mod channels;
 
 type DbPoolType = Arc<r2d2::Pool<ConnectionManager<MysqlConnection>>>;
 
