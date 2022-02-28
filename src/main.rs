@@ -4,7 +4,10 @@ extern crate diesel;
 extern crate diesel_migrations;
 
 use std::collections::HashSet;
+use std::fs::{create_dir, OpenOptions, read_to_string};
+use std::io::Write;
 use std::ops::Sub;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use chrono::{DateTime, Local};
@@ -29,6 +32,7 @@ use serenity::{
 };
 
 use serenity::http::CacheHttp;
+use crate::discord_config::{Channels, Roles};
 
 use crate::site::site_client::SiteClient;
 use crate::site::Authenticator;
@@ -49,7 +53,8 @@ mod schema;
 pub mod site;
 mod utils;
 mod minecraft;
-pub mod channels;
+pub mod discord_config;
+mod team;
 
 type DbPoolType = Arc<r2d2::Pool<ConnectionManager<MysqlConnection>>>;
 
@@ -67,13 +72,17 @@ impl DataHolder {}
 pub struct Bot {
     pub start_time: DateTime<Local>,
     pub site_client: SiteClient,
+    pub channels: Channels,
+    pub roles: Roles,
 }
 
 impl Bot {
-    fn new(site_client: SiteClient) -> Bot {
+    fn new(site_client: SiteClient, channels: Channels, roles: Roles) -> Bot {
         Bot {
             start_time: Local::now(),
             site_client,
+            channels,
+            roles,
         }
     }
 
@@ -274,9 +283,39 @@ async fn main() {
             username: std::env::var("SITE_USERNAME").unwrap(),
             password: std::env::var("SITE_PASSWORD").unwrap(),
         };
-
+        let discord_config = Path::new("discord");
+        if !discord_config.exists() {
+            create_dir(&discord_config).unwrap();
+        }
+        let roles_file = discord_config.join("roles.toml");
+        let channels_file = discord_config.join("channels.toml");
+        let roles = if !roles_file.exists() {
+            let value = Roles { registered: 0 };
+            let result = toml::to_string_pretty(&value).unwrap();
+            let mut file = OpenOptions::new().create(true).write(true).open(&roles_file).unwrap();
+            file.write_all(result.as_bytes()).unwrap();
+            value
+        } else {
+            let value = read_to_string(&roles_file).unwrap();
+            toml::from_str(&value).unwrap()
+        };
+        let channels = if !channels_file.exists() {
+            let value = Channels {
+                bot_log: 0,
+                error_log: 0,
+                welcome_log: 0,
+                general: 0,
+            };
+            let result = toml::to_string_pretty(&value).unwrap();
+            let mut file = OpenOptions::new().create(true).write(true).open(&channels_file).unwrap();
+            file.write_all(result.as_bytes()).unwrap();
+            value
+        } else {
+            let value = read_to_string(&roles_file).unwrap();
+            toml::from_str(&value).unwrap()
+        };
         let mut data = client.data.write().await;
-        data.insert::<DataHolder>(Bot::new(SiteClient::new(authenticator).await));
+        data.insert::<DataHolder>(Bot::new(SiteClient::new(authenticator).await, channels, roles));
         data.insert::<DbPool>(final_pool.clone());
     }
 
@@ -300,7 +339,7 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
                 e.field("Branch", branch, true);
                 e.field("timestamp", timestamp, true);
                 e.description("The Custom Discord Bot for the Reddit Nobility Community");
-                e.url(format!("https://github.com/RedditNobility/rn_bot/commit/{}",commit_hash));
+                e.url(format!("https://github.com/RedditNobility/rn_bot/commit/{}", commit_hash));
                 e.footer(|f| {
                     f.text("Robotic Monarch");
                     f
