@@ -38,4 +38,4 @@ version = "0.10.10"
 version = "1.15.0"
 features = ["macros", "rt-multi-thread"]
 [build-dependencies]
-vergen = "6.0.2"
+vergen = "7.4.2"
